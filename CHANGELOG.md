@@ -3,6 +3,7 @@
 ### Added
 
 - Save the hierarchy depth of a prefab instance to save all instance in the correct order.
+- Add support for Json save method.
 
 ### Changed
 

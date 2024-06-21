@@ -7,7 +7,7 @@ using UnityEngine;
 namespace GameCreator.Runtime.SaveablePrefabs
 {
     [Serializable]
-    internal class ItemPrefabInstanceMetadata : InstanceMetadata
+    internal class ItemPrefabInstanceMetadata : PrefabInstanceMetadata
     {
         public ItemPrefabInstanceMetadata(Item item, GameObject instance, IEnumerable<SaveIdMap> saveIdMaps = null) :
             base(instance, saveIdMaps)

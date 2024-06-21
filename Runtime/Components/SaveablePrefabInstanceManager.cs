@@ -71,7 +71,7 @@ namespace GameCreator.Runtime.SaveablePrefabs
 
         public string SaveID => "saveable-prefab-system";
         public bool IsShared => false;
-        public Type SaveType => typeof(List<PrefabInstanceMetadata>);
+        public Type SaveType => typeof(InstanceMetadataList);
 
         public object GetSaveData(bool includeNonSavable)
         {
