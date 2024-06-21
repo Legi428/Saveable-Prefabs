@@ -7,6 +7,7 @@
 ### Changed
 
 - Update Readme.
+- Make the "Instantiate Saveable Prefab" Instruction instantiate a regular prefab normally and not through the "Saveable Prefab" Manager. 
 
 ## [1.0.0] - 2024-06-21
 

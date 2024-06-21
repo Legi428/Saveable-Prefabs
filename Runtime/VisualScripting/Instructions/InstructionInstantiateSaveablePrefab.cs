@@ -4,6 +4,7 @@ using System;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Search;
+using Object = UnityEngine.Object;
 
 namespace GameCreator.Runtime.VisualScripting
 {
@@ -55,7 +56,15 @@ namespace GameCreator.Runtime.VisualScripting
 
             if (_prefab != null && SaveLoadManager.Instance.IsLoading == false)
             {
-                var instance = SaveablePrefabInstanceManager.Instance.InstantiatePrefab(_prefab, parent, position, rotation);
+                GameObject instance = null;
+                if (_prefab.GetComponent<PrefabGuid>() == null)
+                {
+                    instance = Object.Instantiate(_prefab, position, rotation, parent);
+                }
+                else
+                {
+                    instance = SaveablePrefabInstanceManager.Instance.InstantiatePrefab(_prefab, parent, position, rotation);
+                }
                 _save.Set(instance.gameObject, args);
             }
 
