@@ -1,0 +1,17 @@
+{
+  "name": "GameCreator.Runtime.SaveablePrefabs",
+  "rootNamespace": "GameCreator.Runtime.SaveablePrefabs",
+  "references": [
+    "GUID:406c89e0bc84d48f4b079c3c4cd13320",
+    "GUID:637eac8068651455ca06dff55a1f3bdd"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

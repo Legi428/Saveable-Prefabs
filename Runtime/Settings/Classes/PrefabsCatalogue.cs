@@ -1,60 +1,59 @@
+using GameCreator.Runtime.Common;
 using System;
 using System.Collections.Generic;
-using GameCreator.Runtime.Common;
+using System.Linq;
 using UnityEngine;
 
-namespace GameCreator.Runtime.Reminstance
+namespace GameCreator.Runtime.SaveablePrefabs
 {
     [Serializable]
     public class PrefabsCatalogue
     {
-       
+        // EXPOSED MEMBERS: -----------------------------------------------------------------------
+
+        [SerializeField]
+        GameObject[] _prefabs = Array.Empty<GameObject>();
+
 
         // MEMBERS: -------------------------------------------------------------------------------
 
-        [NonSerialized] private Dictionary<string, GameObject> m_Map;
-
-        // EXPOSED MEMBERS: -----------------------------------------------------------------------
-
-        [SerializeField] private GameObject[] m_Prefabs = Array.Empty<GameObject>();
-
-        // PROPERTIES: ----------------------------------------------------------------------------
-
-        public GameObject[] List => this.m_Prefabs;
+        [NonSerialized]
+        Dictionary<int, GameObject> _map;
 
         // PUBLIC METHODS: ------------------------------------------------------------------------
 
-        public GameObject Get(string prefabGUID)
+        public GameObject Get(UniqueID prefabGuid)
         {
-            this.RequireInitialize();
-            return this.m_Map.TryGetValue(prefabGUID, out GameObject gameObject) ? gameObject : null;
-        }
-        public bool TryGet(string prefabGUID, out GameObject gameObject)
-        {
-            this.RequireInitialize();
-            return this.m_Map.TryGetValue(prefabGUID, out gameObject); 
-        }
-        public bool Contains(string prefabGUID)
-        {
-            this.RequireInitialize();
-            return this.m_Map.ContainsKey(prefabGUID);
-        }
-        private void RequireInitialize()
-        {
-            if (this.m_Map != null) return;
-
-            this.m_Map = new Dictionary<string, GameObject>();
-            foreach (GameObject prefab in this.m_Prefabs) this.m_Map[prefab.GetComponent<RememberInstance>().PrefabGUID] = prefab;
+            RequireInitialize();
+            return _map.GetValueOrDefault(prefabGuid.Get.Hash);
         }
 
-        // INTERNAL METHODS: ----------------------------------------------------------------------
-
-        internal void Set(GameObject[] prefabs)
+        public bool TryGet(UniqueID prefabGuid, out GameObject gameObject)
         {
-            this.m_Prefabs = prefabs;
+            RequireInitialize();
+            return _map.TryGetValue(prefabGuid.Get.Hash, out gameObject);
         }
 
+        public bool Contains(UniqueID prefabGuid)
+        {
+            RequireInitialize();
+            return _map.ContainsKey(prefabGuid.Get.Hash);
+        }
 
+        public GameObject[] GetAll()
+        {
+            return _prefabs;
+        }
 
+        void RequireInitialize()
+        {
+            if (_map != null) return;
+
+            _map = new Dictionary<int, GameObject>();
+            foreach (var prefab in _prefabs)
+            {
+                _map[prefab.GetComponent<PrefabGuid>().Guid.Get.Hash] = prefab;
+            }
+        }
     }
 }

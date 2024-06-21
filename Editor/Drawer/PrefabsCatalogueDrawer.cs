@@ -1,10 +1,10 @@
 using GameCreator.Editor.Common;
-using GameCreator.Runtime.Reminstance;
+using GameCreator.Runtime.SaveablePrefabs;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine.UIElements;
 
-namespace GameCreator.Editor.Reminstance
+namespace GameCreator.Editor.SaveablePrefabs
 {
     [CustomPropertyDrawer(typeof(PrefabsCatalogue))]
     public class PrefabsCatalogueDrawer : TTitleDrawer
@@ -13,23 +13,15 @@ namespace GameCreator.Editor.Reminstance
 
         protected override void CreateContent(VisualElement body, SerializedProperty property)
         {
-            Button buttonRefresh = new Button(ReminstancePostProcessor.RefreshItems)
-            {
-                text = "Refresh",
-                style = { height = 25 }
-            };
-
-            body.Add(new SpaceSmall());
-            body.Add(buttonRefresh);
             body.Add(new SpaceSmall());
 
-            SerializedProperty items = property.FindPropertyRelative("m_Prefabs");
+            var items = property.FindPropertyRelative("_prefabs");
 
-            int itemsCount = items.arraySize;
-            for (int i = 0; i < itemsCount; ++i)
+            var itemsCount = items.arraySize;
+            for (var i = 0; i < itemsCount; ++i)
             {
-                SerializedProperty item = items.GetArrayElementAtIndex(i);
-                PropertyField itemField = new PropertyField(item, string.Empty);
+                var item = items.GetArrayElementAtIndex(i);
+                var itemField = new PropertyField(item, string.Empty);
 
                 itemField.SetEnabled(false);
                 body.Add(itemField);

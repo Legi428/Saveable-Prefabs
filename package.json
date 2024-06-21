@@ -1,12 +1,11 @@
 {
-  "name": "com.doublehitgames.reminstance",
-  "version": "0.0.1",
-  "displayName": "Reminstance",
-  "description": "Reminstance or Rememeber Instance is a Game Creator 2 module, expand the Remember component functionality. It allow save and load Runtime Instances just using a component same Remember. This is the most easy wait to save and load prefab instances in Game Creator 2.",
-  "unity": "2019.1",
+  "name": "com.legi.saveable_prefabs",
+  "version": "1.0.0",
+  "displayName": "Saveable Prefabs",
+  "description": "Saveable Prefabs adds save support to instantiated prefabs.",
+  "unity": "2022.3",
    "author": {
-    "name": "Doublehit Games",
-    "email": "doublehitgames@gmail.com",
-    "url": "https://www.doublehitgames.com"
+    "name": "Legi",
+    "email": "f_marco@gmx.de"
   }
 }
