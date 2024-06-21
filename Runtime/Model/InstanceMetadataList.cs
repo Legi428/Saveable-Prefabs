@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace GameCreator.Runtime.SaveablePrefabs
 {
@@ -16,11 +17,13 @@ namespace GameCreator.Runtime.SaveablePrefabs
 
         public void UpdateInstances()
         {
-            _list.RemoveAll(metadata => metadata.Instance == null);
-            foreach (var metadata in _list)
+            var result = new List<InstanceMetadata>(_list);
+            result.RemoveAll(metadata => metadata.Instance == null);
+            foreach (var metadata in result)
             {
                 metadata.UpdateInstancedData();
             }
+            _list = result.OrderBy(metadata => metadata.HierarchyDepth).ToList();
         }
     }
 }

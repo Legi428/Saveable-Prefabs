@@ -19,6 +19,9 @@ namespace GameCreator.Runtime.SaveablePrefabs
         protected string _pathToParent;
 
         [SerializeField]
+        protected int _hierarchyDepth;
+
+        [SerializeField]
         protected SaveIdMap[] _saveIds;
 
         [SerializeField]
@@ -33,6 +36,7 @@ namespace GameCreator.Runtime.SaveablePrefabs
         public SaveIdMap[] SaveIds => _saveIds;
         public Vector3 Position => _position;
         public Quaternion Rotation => _rotation;
+        public int HierarchyDepth => _hierarchyDepth;
 
         public GameObject Instance { get; set; }
 
@@ -49,14 +53,17 @@ namespace GameCreator.Runtime.SaveablePrefabs
             _rotation = Instance.transform.rotation;
 
             _pathToParent = "";
+            _hierarchyDepth = 0;
             var parent = Instance.transform.parent;
             if (parent != null)
             {
                 _pathToParent = parent.name;
+                _hierarchyDepth++;
             }
             var traversePoint = parent;
             while (traversePoint?.parent != null)
             {
+                _hierarchyDepth++;
                 _pathToParent = $"{traversePoint.name}/{_pathToParent}";
                 traversePoint = traversePoint.parent;
             }
