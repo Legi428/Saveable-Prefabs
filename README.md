@@ -3,15 +3,16 @@ This package adds save support to instantiated prefabs (regular or items) using 
 Based on the fantastic Reminstance package. https://github.com/neoneper/Reminstance
 
 ### Dependencies
-This package required GameCreator 2 and its Inventory 2 module to work correctly.
+This package required GameCreator 2 and its Inventory module to work correctly.
 
 ### How to Contribute:
 Feel free to contribute to this development by fork this repository.
 Join original creator Discord DoubleHitGames at: https://discord.gg/muMDQP6qQB
 
 ### How to Install:
-- 1: Download package from link
-- 2: Extract the package in Unity project and done!
+Use the Package Manager to install this package using the following git URL:
+
+`https://github.com/Legi428/Saveable-Prefabs.git`
 
 # How to use?:
 - Add `PrefabGuid` Component to any non-item prefabs that you want to save after instantiation and save the prefab.
