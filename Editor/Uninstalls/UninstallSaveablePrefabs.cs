@@ -1,8 +1,6 @@
-using GameCreator.Runtime.Common;
 using GameCreator.Runtime.SaveablePrefabs;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.Windows;
 
 namespace GameCreator.Editor.Installs
 {
@@ -10,9 +8,9 @@ namespace GameCreator.Editor.Installs
     {
         static string ModuleName = "Saveable Prefabs";
 
-        [MenuItem(itemName: "Game Creator/Uninstall/Saveable Prefabs",
-                  isValidateFunction: false,
-                  priority: UninstallManager.PRIORITY
+        [MenuItem("Game Creator/Uninstall/Saveable Prefabs",
+                  false,
+                  UninstallManager.PRIORITY
                  )]
         static void Uninstall()
         {

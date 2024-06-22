@@ -10,6 +10,7 @@ namespace GameCreator.Runtime.SaveablePrefabs
     {
         [SerializeField]
         List<PrefabInstanceMetadata> _list = new();
+
         public PrefabInstanceMetadata[] List => _list.ToArray();
 
         public void Add(PrefabInstanceMetadata metadata)

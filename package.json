@@ -5,7 +5,7 @@
   "description": "Saveable Prefabs adds save support to instantiated prefabs.",
   "changelogUrl": "https://github.com/Legi428/Saveable-Prefabs/blob/master/CHANGELOG.md",
   "unity": "2022.3",
-   "author": {
+  "author": {
     "name": "Legi",
     "email": "f_marco@gmx.de"
   }

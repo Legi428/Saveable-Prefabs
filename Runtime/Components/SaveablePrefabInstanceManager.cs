@@ -43,6 +43,48 @@ namespace GameCreator.Runtime.SaveablePrefabs
             _ = SaveLoadManager.Subscribe(this);
         }
 
+        #region Respawn
+
+        void RespawnSavedPrefabInstances()
+        {
+            foreach (var metadata in _instances.List)
+            {
+                if (metadata.ScenePath != SceneManager.GetActiveScene().path) continue;
+                GameObject prefab = null;
+
+                switch (metadata)
+                {
+                    case ItemPrefabInstanceMetadata:
+                    {
+                        var item = InventoryRepository.Get.Items.Get(metadata.Guid.Get);
+                        if (item?.HasPrefab == false) continue;
+                        prefab = GetPrefab(item);
+                        break;
+                    }
+                    case not null when !SaveablePrefabsRepository.Get.Prefabs.TryGet(metadata.Guid, out prefab):
+                        continue;
+                }
+
+                if (prefab == null) continue;
+
+                var wasActive = prefab.activeSelf;
+                prefab.SetActive(false);
+                var foundGameObject = GameObject.Find(metadata.PathToParent);
+                Transform parentTransform = null;
+                if (foundGameObject != null)
+                {
+                    parentTransform = foundGameObject.transform;
+                }
+                var instance = Instantiate(prefab, metadata.Position, metadata.Rotation, parentTransform);
+                metadata.Instance = instance;
+                RestoreSaveIds(instance, metadata.SaveIds, typeof(Remember), typeof(TLocalVariables));
+                instance.SetActive(true);
+                prefab.SetActive(wasActive);
+            }
+        }
+
+        #endregion
+
         #region Instantiation
 
         void OnInstantiateItem()
@@ -96,48 +138,6 @@ namespace GameCreator.Runtime.SaveablePrefabs
             }
 
             return Task.FromResult(true);
-        }
-
-        #endregion
-
-        #region Respawn
-
-        void RespawnSavedPrefabInstances()
-        {
-            foreach (var metadata in _instances.List)
-            {
-                if (metadata.ScenePath != SceneManager.GetActiveScene().path) continue;
-                GameObject prefab = null;
-
-                switch (metadata)
-                {
-                    case ItemPrefabInstanceMetadata:
-                    {
-                        var item = InventoryRepository.Get.Items.Get(metadata.Guid.Get);
-                        if (item?.HasPrefab == false) continue;
-                        prefab = GetPrefab(item);
-                        break;
-                    }
-                    case not null when !SaveablePrefabsRepository.Get.Prefabs.TryGet(metadata.Guid, out prefab):
-                        continue;
-                }
-
-                if (prefab == null) continue;
-
-                var wasActive = prefab.activeSelf;
-                prefab.SetActive(false);
-                var foundGameObject = GameObject.Find(metadata.PathToParent);
-                Transform parentTransform = null;
-                if (foundGameObject != null)
-                {
-                    parentTransform = foundGameObject.transform;
-                }
-                var instance = Instantiate(prefab, metadata.Position, metadata.Rotation, parentTransform);
-                metadata.Instance = instance;
-                RestoreSaveIds(instance, metadata.SaveIds, typeof(Remember), typeof(TLocalVariables));
-                instance.SetActive(true);
-                prefab.SetActive(wasActive);
-            }
         }
 
         #endregion

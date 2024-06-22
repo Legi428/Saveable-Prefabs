@@ -30,6 +30,16 @@ namespace GameCreator.Runtime.SaveablePrefabs
         [SerializeField]
         protected Quaternion _rotation;
 
+        public PrefabInstanceMetadata(GameObject instance, IEnumerable<SaveIdMap> saveIdMaps = null)
+        {
+            Instance = instance;
+            if (instance.GetComponent<PrefabGuid>() is { } prefabGuid)
+            {
+                _guid = prefabGuid.Guid;
+            }
+            _saveIds = saveIdMaps?.ToArray() ?? Array.Empty<SaveIdMap>();
+        }
+
         public string ScenePath => _scenePath;
         public UniqueID Guid => _guid;
         public string PathToParent => _pathToParent;
@@ -39,16 +49,6 @@ namespace GameCreator.Runtime.SaveablePrefabs
         public int HierarchyDepth => _hierarchyDepth;
 
         public GameObject Instance { get; set; }
-
-        public PrefabInstanceMetadata(GameObject instance, IEnumerable<SaveIdMap> saveIdMaps = null)
-        {
-            Instance = instance;
-            if (instance.GetComponent<PrefabGuid>() is {} prefabGuid)
-            {
-                _guid = prefabGuid.Guid;
-            }
-            _saveIds = saveIdMaps?.ToArray() ?? Array.Empty<SaveIdMap>();
-        }
 
         public void UpdateInstancedData()
         {
