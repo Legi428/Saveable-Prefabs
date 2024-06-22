@@ -13,6 +13,10 @@
 - Make the "Instantiate Saveable Prefab" Instruction instantiate a regular prefab normally and not through the "Saveable
   Prefab" Manager.
 - Use ListView to draw the settings page to improve performance.
+- Replace reflection with dynamic methods to improve performance.
+- Calculate the current scenes hash value only once per respawn.
+- Use InstantiateAsync to at least have each prefab instantiated in parallel.
+- Change the SaveIdMap to represent SaveUniqueID values rather than strings.
 
 ## [1.0.0] - 2024-06-21
 

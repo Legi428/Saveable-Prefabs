@@ -11,14 +11,14 @@ namespace GameCreator.Runtime.SaveablePrefabs
         [SerializeField]
         List<PrefabInstanceMetadata> _list = new();
 
-        public PrefabInstanceMetadata[] List => _list.ToArray();
+        public List<PrefabInstanceMetadata> List => _list;
 
         public void Add(PrefabInstanceMetadata metadata)
         {
             _list.Add(metadata);
         }
 
-        public void UpdateInstances()
+        public void PrepareInstances()
         {
             var result = new List<PrefabInstanceMetadata>(_list);
             result.RemoveAll(metadata => metadata.Instance == null);
@@ -26,7 +26,7 @@ namespace GameCreator.Runtime.SaveablePrefabs
             {
                 metadata.UpdateInstancedData();
             }
-            _list = result.OrderBy(metadata => metadata.HierarchyDepth).ToList();
+            _list = result.OrderBy(metadata => metadata.HierarchyDepth).ThenBy(metadata => metadata.Guid.Get.Hash).ToList();
         }
     }
 }

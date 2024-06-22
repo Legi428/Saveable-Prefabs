@@ -10,7 +10,7 @@ namespace GameCreator.Runtime.SaveablePrefabs
     internal class PrefabInstanceMetadata
     {
         [SerializeField]
-        protected string _scenePath;
+        protected int _scenePathHash;
 
         [SerializeField]
         protected UniqueID _guid;
@@ -40,7 +40,7 @@ namespace GameCreator.Runtime.SaveablePrefabs
             _saveIds = saveIdMaps?.ToArray() ?? Array.Empty<SaveIdMap>();
         }
 
-        public string ScenePath => _scenePath;
+        public int ScenePathHash => _scenePathHash;
         public UniqueID Guid => _guid;
         public string PathToParent => _pathToParent;
         public SaveIdMap[] SaveIds => _saveIds;
@@ -52,7 +52,7 @@ namespace GameCreator.Runtime.SaveablePrefabs
 
         public void UpdateInstancedData()
         {
-            _scenePath = Instance.scene.path;
+            _scenePathHash = Instance.scene.path.GetHashCode();
             _position = Instance.transform.position;
             _rotation = Instance.transform.rotation;
 
