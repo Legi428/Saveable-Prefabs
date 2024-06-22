@@ -2,9 +2,11 @@ using GameCreator.Runtime.Common;
 using GameCreator.Runtime.Inventory;
 using GameCreator.Runtime.Variables;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Emit;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -15,6 +17,10 @@ namespace GameCreator.Runtime.SaveablePrefabs
     [DefaultExecutionOrder(ApplicationManager.EXECUTION_ORDER_FIRST_EARLIER)]
     public class SaveablePrefabInstanceManager : Singleton<SaveablePrefabInstanceManager>, IGameSave
     {
+        readonly static ConcurrentDictionary<Type, Action<object, string>> SaveIdSetterCache = new();
+        readonly static ConcurrentDictionary<Type, Func<object, string>> SaveIdGetterCache = new();
+        static Func<object, GameObject> _prefabGetterMethod;
+
         InstanceMetadataList _instances;
 
         void OnDestroy()
@@ -105,20 +111,15 @@ namespace GameCreator.Runtime.SaveablePrefabs
 
                 switch (metadata)
                 {
-                    case PrefabInstanceMetadata prefabInstanceMetadata
-                        when !SaveablePrefabsRepository.Get.Prefabs.TryGet(prefabInstanceMetadata.Guid, out prefab):
-                        continue;
-                    case ItemPrefabInstanceMetadata itemPrefabInstanceMetadata:
+                    case ItemPrefabInstanceMetadata:
                     {
-                        var item = InventoryRepository.Get.Items.Get(itemPrefabInstanceMetadata.Guid.Get);
+                        var item = InventoryRepository.Get.Items.Get(metadata.Guid.Get);
                         if (item?.HasPrefab == false) continue;
-                        var fieldInfo = typeof(Item).GetField("m_Prefab",
-                                                              BindingFlags.Instance
-                                                              | BindingFlags.NonPublic
-                                                              | BindingFlags.GetField);
-                        prefab = fieldInfo?.GetValue(item) as GameObject;
+                        prefab = GetPrefab(item);
                         break;
                     }
+                    case not null when !SaveablePrefabsRepository.Get.Prefabs.TryGet(metadata.Guid, out prefab):
+                        continue;
                 }
 
                 if (prefab == null) continue;
@@ -173,25 +174,121 @@ namespace GameCreator.Runtime.SaveablePrefabs
             return saveIds;
         }
 
+        static GameObject GetPrefab(Item item)
+        {
+            var getter = _prefabGetterMethod;
+            if (getter == null)
+            {
+                getter = CreateGetPrefabDelegate();
+                _prefabGetterMethod = getter;
+            }
+            return getter(item);
+        }
+
         static void SetSaveId(Component component, string newId)
         {
-            var fieldInfo = component.GetType().GetField("m_SaveUniqueID",
-                                                         BindingFlags.Instance
-                                                         | BindingFlags.NonPublic
-                                                         | BindingFlags.GetField);
-            var save = fieldInfo?.GetValue(component) as SaveUniqueID;
-            var saveUniqueID = new SaveUniqueID(save?.SaveValue ?? true, new UniqueID(newId).Get.String);
-            fieldInfo?.SetValue(component, saveUniqueID);
+            try
+            {
+                var type = component.GetType();
+                var setter = SaveIdSetterCache.GetOrAdd(type, CreateSetSaveIdDelegate);
+                setter(component, newId);
+            }
+            catch (InvalidOperationException e)
+            {
+                Debug.LogError(e);
+                throw;
+            }
         }
 
         static string GetSaveId(Component component)
         {
-            var fieldInfo = component.GetType().GetField("m_SaveUniqueID",
-                                                         BindingFlags.Instance
-                                                         | BindingFlags.NonPublic
-                                                         | BindingFlags.GetField);
-            var save = fieldInfo?.GetValue(component) as SaveUniqueID;
-            return save?.Get.String;
+            try
+            {
+                var type = component.GetType();
+                var getter = SaveIdGetterCache.GetOrAdd(type, CreateGetSaveIdDelegate);
+                return getter(component);
+            }
+            catch (InvalidOperationException e)
+            {
+                Debug.LogError(e);
+                throw;
+            }
+        }
+
+        #endregion
+
+        #region Dynamic Method Creation
+
+        static Func<object, GameObject> CreateGetPrefabDelegate()
+        {
+            var fieldInfo = typeof(Item).GetField("m_Prefab", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (fieldInfo == null) throw new InvalidOperationException("Field 'm_Prefab' not found");
+
+            var dynamicMethod = new DynamicMethod("", typeof(GameObject), new[] { typeof(object) }, typeof(Item), true);
+            var il = dynamicMethod.GetILGenerator();
+
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Castclass, typeof(Item));
+            il.Emit(OpCodes.Ldfld, fieldInfo);
+            il.Emit(OpCodes.Ret);
+
+            return (Func<object, GameObject>)dynamicMethod.CreateDelegate(typeof(Func<object, GameObject>));
+        }
+
+        static Action<object, string> CreateSetSaveIdDelegate(Type componentType)
+        {
+            var fieldInfo = componentType.GetField("m_SaveUniqueID", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (fieldInfo == null) throw new InvalidOperationException("Field 'm_SaveUniqueID' not found");
+
+            var dynamicMethod = new DynamicMethod("", null, new[] { typeof(object), typeof(string) }, componentType, true);
+            var il = dynamicMethod.GetILGenerator();
+
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Castclass, componentType);
+
+            il.Emit(OpCodes.Ldfld, fieldInfo);
+
+            il.Emit(OpCodes.Ldarg_1);
+
+            var idStringCtor = typeof(IdString).GetConstructor(new[] { typeof(string) });
+            il.Emit(OpCodes.Newobj, idStringCtor);
+
+            var setterProperty = typeof(SaveUniqueID).GetProperty("Set");
+            if (setterProperty == null) throw new InvalidOperationException("Type 'SaveUniqueID' does not have a 'Set' property");
+            var setMethod = setterProperty.GetSetMethod();
+            il.Emit(OpCodes.Callvirt, setMethod);
+
+            il.Emit(OpCodes.Ret);
+
+            return (Action<object, string>)dynamicMethod.CreateDelegate(typeof(Action<object, string>));
+        }
+
+        static Func<object, string> CreateGetSaveIdDelegate(Type componentType)
+        {
+            var fieldInfo = componentType.GetField("m_SaveUniqueID", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (fieldInfo == null) throw new InvalidOperationException("Field 'm_SaveUniqueID' not found");
+
+            var dynamicMethod = new DynamicMethod("", typeof(string), new[] { typeof(object) }, componentType, true);
+            var il = dynamicMethod.GetILGenerator();
+
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Castclass, componentType);
+
+            il.Emit(OpCodes.Ldfld, fieldInfo);
+
+            var getUniqueIdProperty = typeof(SaveUniqueID).GetProperty("Get");
+            if (getUniqueIdProperty == null)
+                throw new InvalidOperationException("Type 'SaveUniqueID' does not have a 'Get' property");
+            il.Emit(OpCodes.Callvirt, getUniqueIdProperty.GetGetMethod());
+
+            var idStringGetProperty = typeof(IdString).GetProperty("String");
+            if (idStringGetProperty == null)
+                throw new InvalidOperationException("Type 'IdString' does not have a 'String' property");
+            il.Emit(OpCodes.Callvirt, idStringGetProperty.GetGetMethod());
+
+            il.Emit(OpCodes.Ret);
+
+            return (Func<object, string>)dynamicMethod.CreateDelegate(typeof(Func<object, string>));
         }
 
         #endregion
