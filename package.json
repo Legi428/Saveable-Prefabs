@@ -1,6 +1,6 @@
 {
   "name": "com.legi.saveable_prefabs",
-  "version": "1.0.0",
+  "version": "1.1.0-beta",
   "displayName": "Saveable Prefabs",
   "description": "Saveable Prefabs adds save support to instantiated prefabs.",
   "unity": "2022.3",
