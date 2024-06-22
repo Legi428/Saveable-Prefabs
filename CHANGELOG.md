@@ -9,6 +9,7 @@
 
 - Update Readme.
 - Make the "Instantiate Saveable Prefab" Instruction instantiate a regular prefab normally and not through the "Saveable Prefab" Manager. 
+- Use ListView to draw the settings page to improve performance.
 
 ## [1.0.0] - 2024-06-21
 
