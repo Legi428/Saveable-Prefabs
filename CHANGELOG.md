@@ -6,6 +6,7 @@
 - Add support for Json save method.
 - Replace reflection calls with dynamic methods to avoid performance hits.
 - Add editorconfig and apply it to the entire project.
+- Add support for the prefab instance name to be saved.
 
 ### Changed
 

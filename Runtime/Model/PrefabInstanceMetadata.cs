@@ -30,6 +30,9 @@ namespace GameCreator.Runtime.SaveablePrefabs
         [SerializeField]
         protected Quaternion _rotation;
 
+        [SerializeField]
+        protected string _name;
+
         public PrefabInstanceMetadata(GameObject instance, IEnumerable<SaveIdMap> saveIdMaps = null)
         {
             Instance = instance;
@@ -46,6 +49,7 @@ namespace GameCreator.Runtime.SaveablePrefabs
         public SaveIdMap[] SaveIds => _saveIds;
         public Vector3 Position => _position;
         public Quaternion Rotation => _rotation;
+        public string Name => _name;
         public int HierarchyDepth => _hierarchyDepth;
 
         public GameObject Instance { get; set; }
@@ -55,6 +59,7 @@ namespace GameCreator.Runtime.SaveablePrefabs
             _scenePathHash = Instance.scene.path.GetHashCode();
             _position = Instance.transform.position;
             _rotation = Instance.transform.rotation;
+            _name = Instance.name;
 
             _pathToParent = "";
             _hierarchyDepth = 0;

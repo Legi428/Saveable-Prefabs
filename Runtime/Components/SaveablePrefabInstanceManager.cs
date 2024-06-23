@@ -114,6 +114,7 @@ namespace GameCreator.Runtime.SaveablePrefabs
                 {
                     var instance = asyncResult.Result[i];
                     var instanceMetadata = metadataList[i];
+                    instance.name = instanceMetadata.Name;
                     instanceMetadata.Instance = instance;
 
                     Transform parentTransform = null;
