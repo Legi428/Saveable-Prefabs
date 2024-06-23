@@ -22,7 +22,6 @@ namespace GameCreator.Runtime.SaveablePrefabs
         // EDITOR ENTER PLAYMODE: -----------------------------------------------------------------
 
 #if UNITY_EDITOR
-
         [InitializeOnEnterPlayMode]
         public static void InitializeOnEnterPlayMode()
         {

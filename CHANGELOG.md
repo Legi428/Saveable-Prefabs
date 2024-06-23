@@ -1,0 +1,27 @@
+﻿## [1.1.0] - 2024-06-23
+
+### Added
+
+- Save the hierarchy depth of a prefab instance to save all instance in the correct order.
+- Add support for Json save method.
+- Replace reflection calls with dynamic methods to avoid performance hits.
+- Add editorconfig and apply it to the entire project.
+- Add support for the prefab instance name to be saved.
+- Add support for the package in the GameCreator 2 uninstaller. 
+
+### Changed
+
+- Update Readme.
+- Make the "Instantiate Saveable Prefab" Instruction instantiate a regular prefab normally and not through the "Saveable
+  Prefab" Manager.
+- Use ListView to draw the settings page to improve performance.
+- Replace reflection with dynamic methods to improve performance.
+- Calculate the current scenes hash value only once per respawn.
+- Use InstantiateAsync to at least have each prefab instantiated in parallel.
+- Change the SaveIdMap to represent SaveUniqueID values rather than strings.
+
+## [1.0.0] - 2024-06-21
+
+### Added
+
+- Initial release of the rewrite.
