@@ -7,6 +7,7 @@
 ### Changed
 
 - [**Breaking**] Change save id information.
+- [**Breaking**] Use the scene guid for more robust respawning.
 
 ## [1.1.0] - 2024-06-23
 
