@@ -117,18 +117,13 @@ namespace GameCreator.Runtime.SaveablePrefabs
                     instance.name = instanceMetadata.Name;
                     instanceMetadata.Instance = instance;
 
-                    Transform parentTransform = null;
                     if (!string.IsNullOrEmpty(instanceMetadata.PathToParent))
                     {
                         var foundGameObject = GameObject.Find(instanceMetadata.PathToParent);
                         if (foundGameObject != null)
                         {
-                            parentTransform = foundGameObject.transform;
+                            instance.transform.SetParent(foundGameObject.transform);
                         }
-                    }
-                    if (parentTransform != null)
-                    {
-                        instance.transform.SetParent(parentTransform);
                     }
                     RestoreSaveIds(instance, instanceMetadata.SaveIds, typeof(Remember), typeof(TLocalVariables));
                     instance.SetActive(true);
