@@ -1,4 +1,14 @@
-﻿## [1.1.0] - 2024-06-23
+﻿## [Unreleased]
+
+### Added
+
+- Add support for Character and Marker components on a prefab.
+
+### Changed
+
+- [**Breaking**] Change save id information.
+
+## [1.1.0] - 2024-06-23
 
 ### Added
 
@@ -7,7 +17,7 @@
 - Replace reflection calls with dynamic methods to avoid performance hits.
 - Add editorconfig and apply it to the entire project.
 - Add support for the prefab instance name to be saved.
-- Add support for the package in the GameCreator 2 uninstaller. 
+- Add support for the package in the GameCreator 2 uninstaller.
 
 ### Changed
 
