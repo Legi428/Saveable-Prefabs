@@ -41,14 +41,14 @@ namespace GameCreator.Runtime.SaveablePrefabs
 
         static async Task RespawnSavedPrefabInstances(IReadOnlyList<PrefabInstanceMetadata> prefabInstances)
         {
-            var scenePath = SceneManager.GetActiveScene().path.GetHashCode();
+            var sceneGuidHash = SceneManager.GetActiveScene().GetGuid().GetHashCode();
 
             List<GameObject> prefabsToReactivate = new();
             SortedList<int, Dictionary<GameObject, List<PrefabInstanceMetadata>>> prefabsToSpawn = new();
             for (var i = 0; i < prefabInstances.Count; i++)
             {
                 var metadata = prefabInstances[i];
-                if (metadata.ScenePathHash != scenePath) continue;
+                if (metadata.SceneGuidHash != sceneGuidHash) continue;
 
                 if (GetPrefab(metadata) is not { } prefab) continue;
 

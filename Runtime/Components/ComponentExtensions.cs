@@ -6,9 +6,44 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace GameCreator.Runtime.SaveablePrefabs
 {
+    internal static class SceneExtensions
+    {
+        static Func<int, string> _sceneGuidGetterMethod;
+
+        public static string GetGuid(this Scene scene)
+        {
+            _sceneGuidGetterMethod ??= CreateSceneGuidGetter();
+            return _sceneGuidGetterMethod(scene.GetHashCode());
+        }
+
+        static Func<int, string> CreateSceneGuidGetter()
+        {
+            // Define the dynamic method
+            var method = new DynamicMethod("GetSceneGuid",
+                                           typeof(string),
+                                           new[] { typeof(int) },
+                                           typeof(SaveablePrefabInstanceManager),
+                                           true);
+
+            var sceneType = typeof(Scene);
+
+            var getGUIDInternalMethod = sceneType.GetMethod("GetGUIDInternal", BindingFlags.NonPublic | BindingFlags.Static);
+            if (getGUIDInternalMethod == null)
+                throw new InvalidOperationException("GetGUIDInternal method not found in Scene.");
+
+            var il = method.GetILGenerator();
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Call, getGUIDInternalMethod);
+            il.Emit(OpCodes.Ret);
+
+            return (Func<int, string>)method.CreateDelegate(typeof(Func<int, string>));
+        }
+    }
+
     internal static class ItemExtensions
     {
         static Func<Item, GameObject> _prefabGetterMethod;
