@@ -9,10 +9,6 @@ namespace GameCreator.Runtime.SaveablePrefabs
         [SerializeField]
         UniqueID _guid = new("not-yet-indexed");
 
-        public UniqueID Guid
-        {
-            get => _guid;
-            set => _guid = value;
-        }
+        public UniqueID Guid => _guid;
     }
 }

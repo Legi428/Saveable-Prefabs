@@ -1,11 +1,9 @@
+using GameCreator.Runtime.Characters;
 using GameCreator.Runtime.Common;
 using GameCreator.Runtime.Inventory;
 using GameCreator.Runtime.Variables;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Reflection;
-using System.Reflection.Emit;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -17,10 +15,6 @@ namespace GameCreator.Runtime.SaveablePrefabs
     [DefaultExecutionOrder(ApplicationManager.EXECUTION_ORDER_FIRST_EARLIER)]
     public class SaveablePrefabInstanceManager : Singleton<SaveablePrefabInstanceManager>, IGameSave
     {
-        readonly static ConcurrentDictionary<Type, Action<Component, SaveUniqueID>> SaveIdSetterCache = new();
-        readonly static ConcurrentDictionary<Type, Func<Component, SaveUniqueID>> SaveIdGetterCache = new();
-        static Func<Item, GameObject> _prefabGetterMethod;
-
         InstanceMetadataList _instances;
 
         void OnDestroy()
@@ -47,14 +41,14 @@ namespace GameCreator.Runtime.SaveablePrefabs
 
         static async Task RespawnSavedPrefabInstances(IReadOnlyList<PrefabInstanceMetadata> prefabInstances)
         {
-            var scenePath = SceneManager.GetActiveScene().path.GetHashCode();
+            var sceneGuidHash = SceneManager.GetActiveScene().GetGuid().GetHashCode();
 
             List<GameObject> prefabsToReactivate = new();
             SortedList<int, Dictionary<GameObject, List<PrefabInstanceMetadata>>> prefabsToSpawn = new();
             for (var i = 0; i < prefabInstances.Count; i++)
             {
                 var metadata = prefabInstances[i];
-                if (metadata.ScenePathHash != scenePath) continue;
+                if (metadata.SceneGuidHash != sceneGuidHash) continue;
 
                 if (GetPrefab(metadata) is not { } prefab) continue;
 
@@ -96,8 +90,7 @@ namespace GameCreator.Runtime.SaveablePrefabs
             }
         }
 
-        static async Task RespawnPrefabList(GameObject prefab,
-            IReadOnlyList<PrefabInstanceMetadata> metadataList)
+        static async Task RespawnPrefabList(GameObject prefab, IReadOnlyList<PrefabInstanceMetadata> metadataList)
         {
             var count = metadataList.Count;
             var positions = new Vector3[count];
@@ -117,22 +110,14 @@ namespace GameCreator.Runtime.SaveablePrefabs
                     instance.name = instanceMetadata.Name;
                     instanceMetadata.Instance = instance;
 
-                    Transform parentTransform = null;
-                    if (!string.IsNullOrEmpty(instanceMetadata.PathToParent))
+                    if (GameObject.Find(instanceMetadata.PathToParent) is { } foundGameObject)
                     {
-                        var foundGameObject = GameObject.Find(instanceMetadata.PathToParent);
-                        if (foundGameObject != null)
-                        {
-                            parentTransform = foundGameObject.transform;
-                        }
+                        instance.transform.SetParent(foundGameObject.transform);
                     }
-                    if (parentTransform != null)
-                    {
-                        instance.transform.SetParent(parentTransform);
-                    }
-                    RestoreSaveIds(instance, instanceMetadata.SaveIds, typeof(Remember), typeof(TLocalVariables));
+                    RestoreSaveIds(instance, instanceMetadata.SaveIds);
                     instance.SetActive(true);
                 }
+                Physics.SyncTransforms();
             };
             while (!asyncResult.isDone)
             {
@@ -147,7 +132,7 @@ namespace GameCreator.Runtime.SaveablePrefabs
                 case ItemPrefabInstanceMetadata:
                 {
                     var item = InventoryRepository.Get.Items.Get(metadata.Guid.Get);
-                    return item?.HasPrefab == false ? null : GetPrefab(item);
+                    return item?.HasPrefab == false ? null : item.GetPrefab();
                 }
                 case not null when SaveablePrefabsRepository.Get.Prefabs.TryGet(metadata.Guid, out var prefab):
                     return prefab;
@@ -164,7 +149,7 @@ namespace GameCreator.Runtime.SaveablePrefabs
         {
             var item = Item.LastItemInstantiated;
             var gameObjectInstance = Item.LastItemInstanceInstantiated;
-            var saveIdMaps = GetSaveIdMaps(gameObjectInstance, typeof(Remember), typeof(TLocalVariables));
+            var saveIdMaps = GenerateNewIds(gameObjectInstance);
             var metadata = new ItemPrefabInstanceMetadata(item.Item, gameObjectInstance, saveIdMaps);
 
             _instances.Add(metadata);
@@ -176,7 +161,7 @@ namespace GameCreator.Runtime.SaveablePrefabs
             prefab.SetActive(false);
             var instance = Instantiate(prefab, position, rotation, parent);
 
-            var saveIdMaps = GetSaveIdMaps(instance, typeof(Remember), typeof(TLocalVariables));
+            var saveIdMaps = GenerateNewIds(instance);
             var metadata = new PrefabInstanceMetadata(instance, saveIdMaps);
 
             _instances.Add(metadata);
@@ -215,52 +200,95 @@ namespace GameCreator.Runtime.SaveablePrefabs
 
         #region SaveUniqueId Manipulation
 
-        static void RestoreSaveIds(GameObject gameObject, SaveIdMap[] saveIds, params Type[] types)
+        static void RestoreSaveIds(GameObject gameObject, SaveIdMap[] saveIds)
         {
-            foreach (var type in types)
+            foreach (var component in gameObject.GetComponentsInChildren<Remember>(true))
             {
-                foreach (var component in gameObject.GetComponentsInChildren(type, true))
+                ProcessComponent(component);
+            }
+            foreach (var component in gameObject.GetComponentsInChildren<TLocalVariables>(true))
+            {
+                ProcessComponent(component);
+            }
+            foreach (var component in gameObject.GetComponentsInChildren<Character>(true))
+            {
+                ProcessComponent(component);
+            }
+            foreach (var component in gameObject.GetComponentsInChildren<Marker>(true))
+            {
+                ProcessComponent(component);
+            }
+            return;
+
+            void ProcessComponent(Component component)
+            {
+                foreach (var idMap in saveIds)
                 {
-                    foreach (var idMap in saveIds)
+                    if (idMap.OriginalId.Hash == GetIdString(component).Hash)
                     {
-                        if (idMap.OriginalId.Get.Hash == GetSaveUniqueId(component).Get.Hash)
-                        {
-                            SetSaveId(component, idMap.NewId);
-                        }
+                        SetIdString(component, idMap.NewId);
                     }
                 }
             }
         }
 
-        static IEnumerable<SaveIdMap> GetSaveIdMaps(GameObject gameObject, params Type[] types)
+        static IEnumerable<SaveIdMap> GenerateNewIds(GameObject gameObject)
         {
             var saveIds = new List<SaveIdMap>();
-            foreach (var type in types)
+            foreach (var component in gameObject.GetComponentsInChildren<Remember>(true))
             {
-                foreach (var component in gameObject.GetComponentsInChildren(type, true))
-                {
-                    var originalSaveUniqueId = GetSaveUniqueId(component);
-                    var newSaveUniqueId = new SaveUniqueID(originalSaveUniqueId.SaveValue, UniqueID.GenerateID());
-                    saveIds.Add(new SaveIdMap(originalSaveUniqueId, newSaveUniqueId));
-                    SetSaveId(component, newSaveUniqueId);
-                }
+                ProcessComponent(component, saveIds);
+            }
+            foreach (var component in gameObject.GetComponentsInChildren<TLocalVariables>(true))
+            {
+                ProcessComponent(component, saveIds);
+            }
+            foreach (var component in gameObject.GetComponentsInChildren<Character>(true))
+            {
+                ProcessComponent(component, saveIds);
+            }
+            foreach (var component in gameObject.GetComponentsInChildren<Marker>(true))
+            {
+                ProcessComponent(component, saveIds);
             }
             return saveIds;
+
+            void ProcessComponent(Component component, ICollection<SaveIdMap> saveIdMaps)
+            {
+                var idString = GetIdString(component);
+                var newIdString = new IdString(UniqueID.GenerateID());
+                saveIdMaps.Add(new SaveIdMap(idString, newIdString));
+                SetIdString(component, newIdString);
+            }
         }
 
-        static GameObject GetPrefab(Item item)
-        {
-            _prefabGetterMethod ??= CreateItemPrefabGetter();
-            return _prefabGetterMethod(item);
-        }
-
-        static void SetSaveId(Component component, SaveUniqueID saveUniqueID)
+        static void SetIdString(Component component, IdString newIdString)
         {
             try
             {
-                var type = component.GetType();
-                var setter = SaveIdSetterCache.GetOrAdd(type, CreateIdStringSetter);
-                setter(component, saveUniqueID);
+                switch (component)
+                {
+                    case Remember remember:
+                        remember.SetIdString(newIdString);
+                        break;
+                    case TLocalVariables localVariables:
+                        localVariables.SetIdString(newIdString);
+                        break;
+                    case Character character:
+                        character.ChangeId(newIdString);
+                        break;
+                    case Marker marker:
+                        var currentIdString = marker.GetIdString();
+                        marker.SetIdString(newIdString);
+
+                        var dict = marker.GetMarkersDictionary();
+                        dict.Remove(currentIdString);
+                        dict[newIdString] = marker;
+                        break;
+                    default:
+                        Debug.LogWarning($"Encountered incompatible Component {component.GetType().Name} on {component.name}");
+                        break;
+                }
             }
             catch (InvalidOperationException e)
             {
@@ -269,84 +297,30 @@ namespace GameCreator.Runtime.SaveablePrefabs
             }
         }
 
-        static SaveUniqueID GetSaveUniqueId(Component component)
+        static IdString GetIdString(Component component)
         {
             try
             {
-                var type = component.GetType();
-                var getter = SaveIdGetterCache.GetOrAdd(type, CreateIdStringGetter);
-                return getter(component);
+                switch (component)
+                {
+                    case Remember remember:
+                        return remember.GetIdString();
+                    case TLocalVariables localVariables:
+                        return localVariables.GetIdString();
+                    case Character character:
+                        return character.ID;
+                    case Marker marker:
+                        return marker.GetIdString();
+                    default:
+                        Debug.LogWarning($"Encountered incompatible Component {component.GetType().Name} on {component.name}");
+                        return new IdString();
+                }
             }
             catch (InvalidOperationException e)
             {
                 Debug.LogError(e);
                 throw;
             }
-        }
-
-        #endregion
-
-        #region Dynamic Method Creation
-
-        static Func<Item, GameObject> CreateItemPrefabGetter()
-        {
-            var method = new DynamicMethod("GetPrefab",
-                                           typeof(GameObject),
-                                           new[] { typeof(Item) },
-                                           typeof(SaveablePrefabInstanceManager),
-                                           true);
-
-            var prefabField = typeof(Item).GetField("m_Prefab", BindingFlags.NonPublic | BindingFlags.Instance);
-            if (prefabField == null)
-                throw new InvalidOperationException("m_Prefab not found in Item.");
-
-            var il = method.GetILGenerator();
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(OpCodes.Ldfld, prefabField);
-            il.Emit(OpCodes.Ret);
-
-            return (Func<Item, GameObject>)method.CreateDelegate(typeof(Func<Item, GameObject>));
-        }
-
-        static Action<Component, SaveUniqueID> CreateIdStringSetter(Type componentType)
-        {
-            var method = new DynamicMethod("SetSaveId",
-                                           typeof(void),
-                                           new[] { typeof(Component), typeof(SaveUniqueID) },
-                                           typeof(SaveablePrefabInstanceManager),
-                                           true);
-
-            var saveUniqueIdField = componentType.GetField("m_SaveUniqueID", BindingFlags.Instance | BindingFlags.NonPublic);
-            if (saveUniqueIdField == null)
-                throw new InvalidOperationException($"m_SaveUniqueID not found in {componentType.Name} or its base classes.");
-
-            var il = method.GetILGenerator();
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(OpCodes.Ldarg_1);
-            il.Emit(OpCodes.Stfld, saveUniqueIdField);
-            il.Emit(OpCodes.Ret);
-
-            return (Action<Component, SaveUniqueID>)method.CreateDelegate(typeof(Action<Component, SaveUniqueID>));
-        }
-
-        static Func<Component, SaveUniqueID> CreateIdStringGetter(Type componentType)
-        {
-            var method = new DynamicMethod("GetSaveId",
-                                           typeof(SaveUniqueID),
-                                           new[] { typeof(Component) },
-                                           typeof(SaveablePrefabInstanceManager),
-                                           true);
-
-            var saveUniqueIdField = componentType.GetField("m_SaveUniqueID", BindingFlags.Instance | BindingFlags.NonPublic);
-            if (saveUniqueIdField == null)
-                throw new InvalidOperationException($"m_SaveUniqueID not found in {componentType.Name} or its base classes.");
-
-            var il = method.GetILGenerator();
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(OpCodes.Ldfld, saveUniqueIdField);
-            il.Emit(OpCodes.Ret);
-
-            return (Func<Component, SaveUniqueID>)method.CreateDelegate(typeof(Func<Component, SaveUniqueID>));
         }
 
         #endregion

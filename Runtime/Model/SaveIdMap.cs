@@ -8,19 +8,19 @@ namespace GameCreator.Runtime.SaveablePrefabs
     internal struct SaveIdMap
     {
         [SerializeField]
-        SaveUniqueID _originalId;
+        IdString _originalId;
 
         [SerializeField]
-        SaveUniqueID _newId;
+        IdString _newId;
 
-        public SaveIdMap(SaveUniqueID originalId, SaveUniqueID newId)
+        public SaveIdMap(IdString originalId, IdString newId)
         {
             _originalId = originalId;
             _newId = newId;
         }
 
-        public SaveUniqueID OriginalId => _originalId;
+        public IdString OriginalId => _originalId;
 
-        public SaveUniqueID NewId => _newId;
+        public IdString NewId => _newId;
     }
 }
