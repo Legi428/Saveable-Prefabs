@@ -17,8 +17,8 @@ namespace GameCreator.Runtime.SaveablePrefabs
     [DefaultExecutionOrder(ApplicationManager.EXECUTION_ORDER_FIRST_EARLIER)]
     public class SaveablePrefabInstanceManager : Singleton<SaveablePrefabInstanceManager>, IGameSave
     {
-        readonly static ConcurrentDictionary<Type, Action<Component, SaveUniqueID>> SaveIdSetterCache = new();
-        readonly static ConcurrentDictionary<Type, Func<Component, SaveUniqueID>> SaveIdGetterCache = new();
+        readonly static ConcurrentDictionary<Type, Action<Component, IdString>> SaveUniqueIdIdStringSetterCache = new();
+        readonly static ConcurrentDictionary<Type, Func<Component, SaveUniqueID>> SaveUniqueIdGetterCache = new();
         static Func<Item, GameObject> _prefabGetterMethod;
 
         InstanceMetadataList _instances;
@@ -223,9 +223,9 @@ namespace GameCreator.Runtime.SaveablePrefabs
                 {
                     foreach (var idMap in saveIds)
                     {
-                        if (idMap.OriginalId.Get.Hash == GetSaveUniqueId(component).Get.Hash)
+                        if (idMap.OriginalId.Hash == GetSaveUniqueId(component).Get.Hash)
                         {
-                            SetSaveId(component, idMap.NewId);
+                            SetIdString(component, idMap.NewId);
                         }
                     }
                 }
@@ -239,10 +239,10 @@ namespace GameCreator.Runtime.SaveablePrefabs
             {
                 foreach (var component in gameObject.GetComponentsInChildren(type, true))
                 {
-                    var originalSaveUniqueId = GetSaveUniqueId(component);
-                    var newSaveUniqueId = new SaveUniqueID(originalSaveUniqueId.SaveValue, UniqueID.GenerateID());
-                    saveIds.Add(new SaveIdMap(originalSaveUniqueId, newSaveUniqueId));
-                    SetSaveId(component, newSaveUniqueId);
+                    var originalIdString = GetSaveUniqueId(component).Get;
+                    var newIdString = new IdString(UniqueID.GenerateID());
+                    saveIds.Add(new SaveIdMap(originalIdString, newIdString));
+                    SetIdString(component, newIdString);
                 }
             }
             return saveIds;
@@ -254,13 +254,13 @@ namespace GameCreator.Runtime.SaveablePrefabs
             return _prefabGetterMethod(item);
         }
 
-        static void SetSaveId(Component component, SaveUniqueID saveUniqueID)
+        static void SetIdString(Component component, IdString idString)
         {
             try
             {
                 var type = component.GetType();
-                var setter = SaveIdSetterCache.GetOrAdd(type, CreateIdStringSetter);
-                setter(component, saveUniqueID);
+                var setter = SaveUniqueIdIdStringSetterCache.GetOrAdd(type, CreateSaveUniqueIdIdStringSetter);
+                setter(component, idString);
             }
             catch (InvalidOperationException e)
             {
@@ -274,7 +274,7 @@ namespace GameCreator.Runtime.SaveablePrefabs
             try
             {
                 var type = component.GetType();
-                var getter = SaveIdGetterCache.GetOrAdd(type, CreateIdStringGetter);
+                var getter = SaveUniqueIdGetterCache.GetOrAdd(type, CreateSaveUniqueIdGetter);
                 return getter(component);
             }
             catch (InvalidOperationException e)
@@ -308,11 +308,11 @@ namespace GameCreator.Runtime.SaveablePrefabs
             return (Func<Item, GameObject>)method.CreateDelegate(typeof(Func<Item, GameObject>));
         }
 
-        static Action<Component, SaveUniqueID> CreateIdStringSetter(Type componentType)
+        static Action<Component, IdString> CreateSaveUniqueIdIdStringSetter(Type componentType)
         {
             var method = new DynamicMethod("SetSaveId",
                                            typeof(void),
-                                           new[] { typeof(Component), typeof(SaveUniqueID) },
+                                           new[] { typeof(Component), typeof(IdString) },
                                            typeof(SaveablePrefabInstanceManager),
                                            true);
 
@@ -326,10 +326,10 @@ namespace GameCreator.Runtime.SaveablePrefabs
             il.Emit(OpCodes.Stfld, saveUniqueIdField);
             il.Emit(OpCodes.Ret);
 
-            return (Action<Component, SaveUniqueID>)method.CreateDelegate(typeof(Action<Component, SaveUniqueID>));
+            return (Action<Component, IdString>)method.CreateDelegate(typeof(Action<Component, IdString>));
         }
 
-        static Func<Component, SaveUniqueID> CreateIdStringGetter(Type componentType)
+        static Func<Component, SaveUniqueID> CreateSaveUniqueIdGetter(Type componentType)
         {
             var method = new DynamicMethod("GetSaveId",
                                            typeof(SaveUniqueID),
