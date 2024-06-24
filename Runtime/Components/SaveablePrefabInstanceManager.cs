@@ -1,3 +1,4 @@
+using GameCreator.Runtime.Characters;
 using GameCreator.Runtime.Common;
 using GameCreator.Runtime.Inventory;
 using GameCreator.Runtime.Variables;
@@ -17,9 +18,13 @@ namespace GameCreator.Runtime.SaveablePrefabs
     [DefaultExecutionOrder(ApplicationManager.EXECUTION_ORDER_FIRST_EARLIER)]
     public class SaveablePrefabInstanceManager : Singleton<SaveablePrefabInstanceManager>, IGameSave
     {
-        readonly static ConcurrentDictionary<Type, Action<Component, IdString>> SaveUniqueIdIdStringSetterCache = new();
-        readonly static ConcurrentDictionary<Type, Func<Component, SaveUniqueID>> SaveUniqueIdGetterCache = new();
+        readonly static ConcurrentDictionary<Type, Action<Component, UniqueID>> SaveUniqueIdIdStringSetterCache = new();
+        static Func<Component, SaveUniqueID> _rememberSaveUniqueIdGetterCache;
+        static Func<Component, SaveUniqueID> _localVariablesSaveUniqueIdGetterCache;
         static Func<Item, GameObject> _prefabGetterMethod;
+        static Func<Marker, UniqueID> _markerUniqueIdGetterMethod;
+        static Action<Marker, UniqueID> _markerUniqueIdSetterMethod;
+        static Func<Dictionary<IdString, Marker>> _markerDictionaryGetterMethod;
 
         InstanceMetadataList _instances;
 
@@ -159,7 +164,7 @@ namespace GameCreator.Runtime.SaveablePrefabs
         {
             var item = Item.LastItemInstantiated;
             var gameObjectInstance = Item.LastItemInstanceInstantiated;
-            var saveIdMaps = GetSaveIdMaps(gameObjectInstance, typeof(Remember), typeof(TLocalVariables));
+            var saveIdMaps = GenerateNewIds(gameObjectInstance, typeof(Remember), typeof(Character), typeof(Marker));
             var metadata = new ItemPrefabInstanceMetadata(item.Item, gameObjectInstance, saveIdMaps);
 
             _instances.Add(metadata);
@@ -171,7 +176,11 @@ namespace GameCreator.Runtime.SaveablePrefabs
             prefab.SetActive(false);
             var instance = Instantiate(prefab, position, rotation, parent);
 
-            var saveIdMaps = GetSaveIdMaps(instance, typeof(Remember), typeof(TLocalVariables));
+            var saveIdMaps = GenerateNewIds(instance,
+                                            typeof(Remember),
+                                            typeof(TLocalVariables),
+                                            typeof(Character),
+                                            typeof(Marker));
             var metadata = new PrefabInstanceMetadata(instance, saveIdMaps);
 
             _instances.Add(metadata);
@@ -218,7 +227,7 @@ namespace GameCreator.Runtime.SaveablePrefabs
                 {
                     foreach (var idMap in saveIds)
                     {
-                        if (idMap.OriginalId.Hash == GetSaveUniqueId(component).Get.Hash)
+                        if (idMap.OriginalId.Hash == GetIdString(component)?.Hash)
                         {
                             SetIdString(component, idMap.NewId);
                         }
@@ -227,14 +236,14 @@ namespace GameCreator.Runtime.SaveablePrefabs
             }
         }
 
-        static IEnumerable<SaveIdMap> GetSaveIdMaps(GameObject gameObject, params Type[] types)
+        static IEnumerable<SaveIdMap> GenerateNewIds(GameObject gameObject, params Type[] types)
         {
             var saveIds = new List<SaveIdMap>();
             foreach (var type in types)
             {
                 foreach (var component in gameObject.GetComponentsInChildren(type, true))
                 {
-                    var originalIdString = GetSaveUniqueId(component).Get;
+                    if (GetIdString(component) is not { } originalIdString) continue;
                     var newIdString = new IdString(UniqueID.GenerateID());
                     saveIds.Add(new SaveIdMap(originalIdString, newIdString));
                     SetIdString(component, newIdString);
@@ -253,24 +262,60 @@ namespace GameCreator.Runtime.SaveablePrefabs
         {
             try
             {
-                var type = component.GetType();
-                var setter = SaveUniqueIdIdStringSetterCache.GetOrAdd(type, CreateSaveUniqueIdIdStringSetter);
-                setter(component, idString);
+                switch (component)
+                {
+                    case Remember or TLocalVariables:
+                        var type = component.GetType();
+                        var setter = SaveUniqueIdIdStringSetterCache.GetOrAdd(type, CreateSaveUniqueIdUniqueIdSetter);
+                        setter(component, new UniqueID(idString.String));
+                        break;
+                    case Character character:
+                        character.ChangeId(idString);
+                        break;
+                    case Marker marker:
+                        _markerUniqueIdGetterMethod ??= CreateMarkerUniqueIdGetter();
+                        var currentIdString = _markerUniqueIdGetterMethod(marker).Get;
+
+                        _markerUniqueIdSetterMethod ??= CreateMarkerUniqueIdSetter();
+                        _markerUniqueIdSetterMethod(marker, new UniqueID(idString.String));
+
+                        _markerDictionaryGetterMethod ??= CreateMarkerDictionaryGetter();
+                        var dict = _markerDictionaryGetterMethod();
+                        dict.Remove(currentIdString);
+                        dict[idString] = marker;
+
+                        break;
+                }
             }
             catch (InvalidOperationException e)
             {
+                Debug.Log(component.GetType().Name + " on " + component.name);
                 Debug.LogError(e);
                 throw;
             }
         }
 
-        static SaveUniqueID GetSaveUniqueId(Component component)
+        static IdString? GetIdString(Component component)
         {
             try
             {
-                var type = component.GetType();
-                var getter = SaveUniqueIdGetterCache.GetOrAdd(type, CreateSaveUniqueIdGetter);
-                return getter(component);
+                switch (component)
+                {
+                    case Remember:
+                        _rememberSaveUniqueIdGetterCache ??= CreateSaveUniqueIdGetter(typeof(Remember));
+                        return _rememberSaveUniqueIdGetterCache(component).Get;
+                    case TLocalVariables:
+                        _localVariablesSaveUniqueIdGetterCache ??= CreateSaveUniqueIdGetter(typeof(TLocalVariables));
+                        return _localVariablesSaveUniqueIdGetterCache(component).Get;
+                    case Character character:
+                        return character.ID;
+                    case Marker marker:
+                        _markerUniqueIdGetterMethod ??= CreateMarkerUniqueIdGetter();
+                        return _markerUniqueIdGetterMethod(marker).Get;
+                    default:
+                        Debug.LogWarning($"Encountered incompatible Component {component.GetType().Name} on {component.name}");
+                        return null;
+                }
             }
             catch (InvalidOperationException e)
             {
@@ -285,7 +330,7 @@ namespace GameCreator.Runtime.SaveablePrefabs
 
         static Func<Item, GameObject> CreateItemPrefabGetter()
         {
-            var method = new DynamicMethod("GetPrefab",
+            var method = new DynamicMethod("GetItemPrefab",
                                            typeof(GameObject),
                                            new[] { typeof(Item) },
                                            typeof(SaveablePrefabInstanceManager),
@@ -303,11 +348,54 @@ namespace GameCreator.Runtime.SaveablePrefabs
             return (Func<Item, GameObject>)method.CreateDelegate(typeof(Func<Item, GameObject>));
         }
 
-        static Action<Component, IdString> CreateSaveUniqueIdIdStringSetter(Type componentType)
+        static Func<Marker, UniqueID> CreateMarkerUniqueIdGetter()
         {
-            var method = new DynamicMethod("SetSaveId",
+            var method = new DynamicMethod("GetMarkerUniqueId",
+                                           typeof(UniqueID),
+                                           new[] { typeof(Marker) },
+                                           typeof(SaveablePrefabInstanceManager),
+                                           true);
+
+            var uniqueIdField = typeof(Marker).GetField("m_UniqueID", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (uniqueIdField == null)
+                throw new InvalidOperationException("m_UniqueID not found in Marker or its base classes.");
+
+            var il = method.GetILGenerator();
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Ldfld, uniqueIdField);
+            il.Emit(OpCodes.Ret);
+
+            return (Func<Marker, UniqueID>)method.CreateDelegate(typeof(Func<Marker, UniqueID>));
+        }
+
+        static Func<Dictionary<IdString, Marker>> CreateMarkerDictionaryGetter()
+        {
+            var method = new DynamicMethod("GetMarkerDictionary",
+                                           typeof(Dictionary<IdString, Marker>),
+                                           new[] { typeof(Marker) },
+                                           typeof(SaveablePrefabInstanceManager),
+                                           true);
+
+            var markerDictionaryProperty = typeof(Marker).GetProperty("Markers", BindingFlags.NonPublic | BindingFlags.Static);
+            if (markerDictionaryProperty == null)
+                throw new InvalidOperationException("Markers property not found in Marker or its base classes.");
+
+            var getMarkerDictionaryMethod = markerDictionaryProperty.GetGetMethod(true);
+            if (getMarkerDictionaryMethod == null)
+                throw new InvalidOperationException("GetMethod for Markers property not found.");
+
+            var il = method.GetILGenerator();
+            il.Emit(OpCodes.Call, getMarkerDictionaryMethod);
+            il.Emit(OpCodes.Ret);
+
+            return (Func<Dictionary<IdString, Marker>>)method.CreateDelegate(typeof(Func<Dictionary<IdString, Marker>>));
+        }
+
+        static Action<Component, UniqueID> CreateSaveUniqueIdUniqueIdSetter(Type componentType)
+        {
+            var method = new DynamicMethod("SetSaveUniqueIdUniqueId",
                                            typeof(void),
-                                           new[] { typeof(Component), typeof(IdString) },
+                                           new[] { typeof(Component), typeof(UniqueID) },
                                            typeof(SaveablePrefabInstanceManager),
                                            true);
 
@@ -315,13 +403,40 @@ namespace GameCreator.Runtime.SaveablePrefabs
             if (saveUniqueIdField == null)
                 throw new InvalidOperationException($"m_SaveUniqueID not found in {componentType.Name} or its base classes.");
 
+            var uniqueIdField =
+                saveUniqueIdField.FieldType.GetField("m_UniqueID", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (uniqueIdField == null)
+                throw new InvalidOperationException("m_UniqueID not found in SaveUniqueID or its base classes.");
+
+            var il = method.GetILGenerator();
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Ldfld, saveUniqueIdField);
+            il.Emit(OpCodes.Ldarg_1);
+            il.Emit(OpCodes.Stfld, uniqueIdField);
+            il.Emit(OpCodes.Ret);
+
+            return (Action<Component, UniqueID>)method.CreateDelegate(typeof(Action<Component, UniqueID>));
+        }
+
+        static Action<Marker, UniqueID> CreateMarkerUniqueIdSetter()
+        {
+            var method = new DynamicMethod("SetMarkerUniqueId",
+                                           typeof(void),
+                                           new[] { typeof(Marker), typeof(UniqueID) },
+                                           typeof(SaveablePrefabInstanceManager),
+                                           true);
+
+            var uniqueIdField = typeof(Marker).GetField("m_UniqueID", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (uniqueIdField == null)
+                throw new InvalidOperationException("m_UniqueID not found in Marker or its base classes.");
+
             var il = method.GetILGenerator();
             il.Emit(OpCodes.Ldarg_0);
             il.Emit(OpCodes.Ldarg_1);
-            il.Emit(OpCodes.Stfld, saveUniqueIdField);
+            il.Emit(OpCodes.Stfld, uniqueIdField);
             il.Emit(OpCodes.Ret);
 
-            return (Action<Component, IdString>)method.CreateDelegate(typeof(Action<Component, IdString>));
+            return (Action<Marker, UniqueID>)method.CreateDelegate(typeof(Action<Marker, UniqueID>));
         }
 
         static Func<Component, SaveUniqueID> CreateSaveUniqueIdGetter(Type componentType)
