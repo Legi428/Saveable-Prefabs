@@ -7,6 +7,7 @@
 ### Changed
 
 - [**Breaking**] The new InstanceGuid is now used to make parenting more robust.
+- Prefabs are now saved in correct order given their sibling index.
 
 ## [1.2.0] - 2024-06-24
 
