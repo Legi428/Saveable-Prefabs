@@ -8,6 +8,7 @@ Based on the fantastic Reminstance package. https://github.com/neoneper/Reminsta
 - Save instantiated prefabs
 - Load instantiated prefabs using async methods
 - Dismiss instantiated prefabs that are destroyed before saving
+- Robust parenting system using the included `InstanceGuid` component
 - Not replacing any Game Creator 2 components
 - Give each prefab instance unique Ids in certain components
 - Saved information:
@@ -62,6 +63,8 @@ Use the Package Manager to install this package using the following git URL:
 # How to use?:
 
 - Add the `PrefabGuid` component to any non-item prefabs that you want to save after instantiation.
+- To have the most robust reparenting of prefab instances, add the `InstanceGuid` component to any GameObject you'll
+  have be the parent of newly instantiated prefabs.
 
 *You can see all prefabs with the `PrefabGuid` component in `Game Creator -> Settings -> Saveable Prefabs`.*
 
