@@ -9,7 +9,7 @@ namespace GameCreator.Runtime.SaveablePrefabs
         [SerializeField]
         UniqueID _guid = new();
 
-        public int GuidHash => _guid.Get.Hash;
+        public IdString GuidIdString => _guid.Get;
 
         void Awake()
         {
@@ -19,6 +19,13 @@ namespace GameCreator.Runtime.SaveablePrefabs
         void OnDestroy()
         {
             SaveablePrefabInstanceManager.UnregisterInstanceGuid(this);
+        }
+
+        public void SetGuid(IdString newIdString)
+        {
+            SaveablePrefabInstanceManager.UnregisterInstanceGuid(this);
+            _guid.Set = newIdString;
+            SaveablePrefabInstanceManager.RegisterInstanceGuid(this);
         }
     }
 }

@@ -231,6 +231,10 @@ namespace GameCreator.Runtime.SaveablePrefabs
             {
                 ProcessComponent(component);
             }
+            foreach (var component in gameObject.GetComponentsInChildren<InstanceGuid>(true))
+            {
+                ProcessComponent(component);
+            }
             return;
 
             void ProcessComponent(Component component)
@@ -298,6 +302,9 @@ namespace GameCreator.Runtime.SaveablePrefabs
                         dict.Remove(currentIdString);
                         dict[newIdString] = marker;
                         break;
+                    case InstanceGuid instanceGuid:
+                        instanceGuid.SetGuid(newIdString);
+                        break;
                     default:
                         Debug.LogWarning($"Encountered incompatible Component {component.GetType().Name} on {component.name}");
                         break;
@@ -324,6 +331,8 @@ namespace GameCreator.Runtime.SaveablePrefabs
                         return character.ID;
                     case Marker marker:
                         return marker.GetIdString();
+                    case InstanceGuid instanceGuid:
+                        return instanceGuid.GuidIdString;
                     default:
                         Debug.LogWarning($"Encountered incompatible Component {component.GetType().Name} on {component.name}");
                         return new IdString();
@@ -342,13 +351,13 @@ namespace GameCreator.Runtime.SaveablePrefabs
 
         public static void RegisterInstanceGuid(InstanceGuid instanceGuid)
         {
-            ReferencedInstanceGuids.TryAdd(instanceGuid.GuidHash, instanceGuid.transform);
+            ReferencedInstanceGuids.TryAdd(instanceGuid.GuidIdString.Hash, instanceGuid.transform);
         }
 
         public static void UnregisterInstanceGuid(InstanceGuid instanceGuid)
         {
             if (ApplicationManager.IsExiting) return;
-            ReferencedInstanceGuids.Remove(instanceGuid.GuidHash);
+            ReferencedInstanceGuids.Remove(instanceGuid.GuidIdString.Hash);
         }
 
         #endregion

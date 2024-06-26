@@ -79,7 +79,7 @@ namespace GameCreator.Runtime.SaveablePrefabs
 
                 if (current.GetComponent<InstanceGuid>() is { } instanceGuid)
                 {
-                    instanceGuidHash = instanceGuid.GuidHash;
+                    instanceGuidHash = instanceGuid.GuidIdString.Hash;
                     break;
                 }
 
