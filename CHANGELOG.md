@@ -1,4 +1,15 @@
-﻿## [1.2.0] - 2024-06-24
+﻿## [1.3.0] - 2024-06-26
+
+### Added
+
+- New InstanceGuid component that gives a GameObject a unique id.
+
+### Changed
+
+- [**Breaking**] The new InstanceGuid is now used to make parenting more robust.
+- Prefabs are now saved in correct order given their sibling index.
+
+## [1.2.0] - 2024-06-24
 
 ### Added
 

@@ -15,6 +15,7 @@ namespace GameCreator.Runtime.SaveablePrefabs
     [DefaultExecutionOrder(ApplicationManager.EXECUTION_ORDER_FIRST_EARLIER)]
     public class SaveablePrefabInstanceManager : Singleton<SaveablePrefabInstanceManager>, IGameSave
     {
+        readonly static Dictionary<int, Transform> ReferencedInstanceGuids = new();
         InstanceMetadataList _instances;
 
         void OnDestroy()
@@ -33,6 +34,7 @@ namespace GameCreator.Runtime.SaveablePrefabs
         {
             base.OnCreate();
             _instances = new InstanceMetadataList();
+            ReferencedInstanceGuids.Clear();
             Item.EventInstantiate += OnInstantiateItem;
             _ = SaveLoadManager.Subscribe(this);
         }
@@ -110,10 +112,7 @@ namespace GameCreator.Runtime.SaveablePrefabs
                     instance.name = instanceMetadata.Name;
                     instanceMetadata.Instance = instance;
 
-                    if (GameObject.Find(instanceMetadata.PathToParent) is { } foundGameObject)
-                    {
-                        instance.transform.SetParent(foundGameObject.transform);
-                    }
+                    ReparentNewInstance(instanceMetadata, instance);
                     RestoreSaveIds(instance, instanceMetadata.SaveIds);
                     instance.SetActive(true);
                 }
@@ -122,6 +121,20 @@ namespace GameCreator.Runtime.SaveablePrefabs
             while (!asyncResult.isDone)
             {
                 await Task.Yield();
+            }
+        }
+
+        static void ReparentNewInstance(PrefabInstanceMetadata instanceMetadata, GameObject instance)
+        {
+            var parentStructure = instanceMetadata.ParentStructure;
+            if (ReferencedInstanceGuids.TryGetValue(parentStructure.InstanceGuidHash, out var foundTransform))
+            {
+                var newParent = foundTransform.Find(parentStructure.Path) ?? foundTransform;
+                instance.transform.SetParent(newParent);
+            }
+            else if (parentStructure.Path != string.Empty && GameObject.Find(parentStructure.Path) is { } foundGameObject)
+            {
+                instance.transform.SetParent(foundGameObject.transform);
             }
         }
 
@@ -218,6 +231,10 @@ namespace GameCreator.Runtime.SaveablePrefabs
             {
                 ProcessComponent(component);
             }
+            foreach (var component in gameObject.GetComponentsInChildren<InstanceGuid>(true))
+            {
+                ProcessComponent(component);
+            }
             return;
 
             void ProcessComponent(Component component)
@@ -285,6 +302,9 @@ namespace GameCreator.Runtime.SaveablePrefabs
                         dict.Remove(currentIdString);
                         dict[newIdString] = marker;
                         break;
+                    case InstanceGuid instanceGuid:
+                        instanceGuid.SetGuid(newIdString);
+                        break;
                     default:
                         Debug.LogWarning($"Encountered incompatible Component {component.GetType().Name} on {component.name}");
                         break;
@@ -311,6 +331,8 @@ namespace GameCreator.Runtime.SaveablePrefabs
                         return character.ID;
                     case Marker marker:
                         return marker.GetIdString();
+                    case InstanceGuid instanceGuid:
+                        return instanceGuid.GuidIdString;
                     default:
                         Debug.LogWarning($"Encountered incompatible Component {component.GetType().Name} on {component.name}");
                         return new IdString();
@@ -321,6 +343,21 @@ namespace GameCreator.Runtime.SaveablePrefabs
                 Debug.LogError(e);
                 throw;
             }
+        }
+
+        #endregion
+
+        #region Instance Guid
+
+        public static void RegisterInstanceGuid(InstanceGuid instanceGuid)
+        {
+            ReferencedInstanceGuids.TryAdd(instanceGuid.GuidIdString.Hash, instanceGuid.transform);
+        }
+
+        public static void UnregisterInstanceGuid(InstanceGuid instanceGuid)
+        {
+            if (ApplicationManager.IsExiting) return;
+            ReferencedInstanceGuids.Remove(instanceGuid.GuidIdString.Hash);
         }
 
         #endregion

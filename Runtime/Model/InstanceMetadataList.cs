@@ -26,7 +26,8 @@ namespace GameCreator.Runtime.SaveablePrefabs
             {
                 metadata.UpdateInstancedData();
             }
-            _list = result.OrderBy(metadata => metadata.HierarchyDepth).ThenBy(metadata => metadata.Guid.Get.Hash).ToList();
+            _list = result.OrderBy(metadata => metadata.HierarchyDepth)
+                .ThenBy(metadata => metadata.Instance.transform.GetSiblingIndex()).ToList();
         }
     }
 }

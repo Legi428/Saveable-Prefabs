@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using UnityEngine;
 
 namespace GameCreator.Runtime.SaveablePrefabs
@@ -16,7 +17,7 @@ namespace GameCreator.Runtime.SaveablePrefabs
         protected UniqueID _guid;
 
         [SerializeField]
-        protected string _pathToParent;
+        protected ParentStructure _parentStructure;
 
         [SerializeField]
         protected int _hierarchyDepth;
@@ -45,13 +46,12 @@ namespace GameCreator.Runtime.SaveablePrefabs
 
         public int SceneGuidHash => _sceneGuidHash;
         public UniqueID Guid => _guid;
-        public string PathToParent => _pathToParent;
+        public ParentStructure ParentStructure => _parentStructure;
         public SaveIdMap[] SaveIds => _saveIds;
         public Vector3 Position => _position;
         public Quaternion Rotation => _rotation;
         public string Name => _name;
         public int HierarchyDepth => _hierarchyDepth;
-
         public GameObject Instance { get; set; }
 
         public void UpdateInstancedData()
@@ -61,21 +61,48 @@ namespace GameCreator.Runtime.SaveablePrefabs
             _rotation = Instance.transform.rotation;
             _name = Instance.name;
 
-            _pathToParent = "";
-            _hierarchyDepth = 0;
-            var parent = Instance.transform.parent;
-            if (parent != null)
+            _parentStructure = GetParentStructure(Instance);
+            _hierarchyDepth = GetHierarchyDepth(Instance);
+        }
+
+        ParentStructure GetParentStructure(GameObject startPoint)
+        {
+            var path = new StringBuilder();
+            var current = startPoint.transform.parent;
+
+            var instanceGuidHash = 0;
+
+            while (current != null)
             {
-                _pathToParent = parent.name;
-                _hierarchyDepth++;
+                if (path.Length > 0)
+                    path.Insert(0, "/");
+
+                if (current.GetComponent<InstanceGuid>() is { } instanceGuid)
+                {
+                    instanceGuidHash = instanceGuid.GuidIdString.Hash;
+                    break;
+                }
+
+                path.Insert(0, current.name);
+
+                current = current.parent;
             }
-            var traversePoint = parent;
-            while (traversePoint?.parent != null)
+
+            return new ParentStructure(instanceGuidHash, path.ToString());
+        }
+
+        int GetHierarchyDepth(GameObject gameObject)
+        {
+            var depth = 0;
+            var current = gameObject.transform;
+
+            while (current.parent != null)
             {
-                _hierarchyDepth++;
-                _pathToParent = $"{traversePoint.name}/{_pathToParent}";
-                traversePoint = traversePoint.parent;
+                depth++;
+                current = current.parent;
             }
+
+            return depth;
         }
     }
 }

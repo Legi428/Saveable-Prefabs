@@ -56,7 +56,7 @@ namespace GameCreator.Runtime.VisualScripting
 
             if (_prefab != null && SaveLoadManager.Instance.IsLoading == false)
             {
-                GameObject instance = null;
+                GameObject instance;
                 if (_prefab.GetComponent<PrefabGuid>() == null)
                 {
                     instance = Object.Instantiate(_prefab, position, rotation, parent);
