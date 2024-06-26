@@ -1,4 +1,14 @@
-﻿## [1.2.0] - 2024-06-24
+﻿## [Unreleased]
+
+### Added
+
+- New InstanceGuid component that gives a GameObject a unique id.
+
+### Changed
+
+- [**Breaking**] The new InstanceGuid is now used to make parenting more robust.
+
+## [1.2.0] - 2024-06-24
 
 ### Added
 
