@@ -8,7 +8,7 @@ Based on the fantastic Reminstance package. https://github.com/neoneper/Reminsta
 - Save instantiated prefabs
 - Load instantiated prefabs using async methods
 - Dismiss instantiated prefabs that are destroyed before saving
-- Robust parenting system using the included `InstanceGuid` component
+- Robust parenting system using the `InstanceGuid` component
 - Not replacing any Game Creator 2 components
 - Give each prefab instance unique Ids in certain components
 - Saved information:
@@ -28,6 +28,9 @@ Based on the fantastic Reminstance package. https://github.com/neoneper/Reminsta
 ### Dependencies
 
 This package requires Game Creator 2 and its Inventory module to work correctly.
+
+Additionally, you have to install this package separately in the Unity Package
+Manager: https://github.com/Legi428/Unique-GameObjects
 
 Supported Unity versions (see next section for more information):
 
@@ -56,9 +59,10 @@ Join and show support to the original creator DoubleHitGames Discord in their: h
 
 ### How to Install:
 
-Use the Package Manager to install this package using the following git URL:
+Use the Package Manager to install the following two packages:
 
 `https://github.com/Legi428/Saveable-Prefabs.git`
+`https://github.com/Legi428/Unique-GameObjects.git`
 
 # How to use?:
 

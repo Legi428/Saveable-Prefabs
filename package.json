@@ -6,6 +6,9 @@
   "changelogUrl": "https://github.com/Legi428/Saveable-Prefabs/blob/master/CHANGELOG.md",
   "unity": "2022.3",
   "unityRelease": "35f1",
+  "dependencies": {
+    "com.legi.unique_game_objects": "1.1.0"
+  },
   "author": {
     "name": "Legi",
     "email": "f_marco@gmx.de"
