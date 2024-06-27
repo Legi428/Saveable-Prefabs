@@ -1,6 +1,7 @@
 using GameCreator.Runtime.Characters;
 using GameCreator.Runtime.Common;
 using GameCreator.Runtime.Inventory;
+using GameCreator.Runtime.UniqueGameObjects;
 using GameCreator.Runtime.Variables;
 using System;
 using System.Collections.Generic;
@@ -15,7 +16,6 @@ namespace GameCreator.Runtime.SaveablePrefabs
     [DefaultExecutionOrder(ApplicationManager.EXECUTION_ORDER_FIRST_EARLIER)]
     public class SaveablePrefabInstanceManager : Singleton<SaveablePrefabInstanceManager>, IGameSave
     {
-        readonly static Dictionary<int, Transform> ReferencedInstanceGuids = new();
         InstanceMetadataList _instances;
 
         void OnDestroy()
@@ -34,7 +34,6 @@ namespace GameCreator.Runtime.SaveablePrefabs
         {
             base.OnCreate();
             _instances = new InstanceMetadataList();
-            ReferencedInstanceGuids.Clear();
             Item.EventInstantiate += OnInstantiateItem;
             _ = SaveLoadManager.Subscribe(this);
         }
@@ -127,8 +126,9 @@ namespace GameCreator.Runtime.SaveablePrefabs
         static void ReparentNewInstance(PrefabInstanceMetadata instanceMetadata, GameObject instance)
         {
             var parentStructure = instanceMetadata.ParentStructure;
-            if (ReferencedInstanceGuids.TryGetValue(parentStructure.InstanceGuidHash, out var foundTransform))
+            if (UniqueGameObjectsManager.Instance.GetByID(parentStructure.InstanceGuidHash) is { } foundUniqueGameObject)
             {
+                var foundTransform = foundUniqueGameObject.transform;
                 var newParent = foundTransform.Find(parentStructure.Path) ?? foundTransform;
                 instance.transform.SetParent(newParent);
             }
@@ -343,21 +343,6 @@ namespace GameCreator.Runtime.SaveablePrefabs
                 Debug.LogError(e);
                 throw;
             }
-        }
-
-        #endregion
-
-        #region Instance Guid
-
-        public static void RegisterInstanceGuid(InstanceGuid instanceGuid)
-        {
-            ReferencedInstanceGuids.TryAdd(instanceGuid.GuidIdString.Hash, instanceGuid.transform);
-        }
-
-        public static void UnregisterInstanceGuid(InstanceGuid instanceGuid)
-        {
-            if (ApplicationManager.IsExiting) return;
-            ReferencedInstanceGuids.Remove(instanceGuid.GuidIdString.Hash);
         }
 
         #endregion

@@ -1,4 +1,10 @@
-﻿## [1.3.0] - 2024-06-26
+﻿## [1.4.0] - 2024-06-28
+
+### Changed
+
+- [**Breaking**] Use the `Unique Game Objects` package version 1.1.0 instead of built in InstanceGuid component.
+
+## [1.3.0] - 2024-06-26
 
 ### Added
 
