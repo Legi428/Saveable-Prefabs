@@ -7,7 +7,7 @@
   "unity": "2022.3",
   "unityRelease": "35f1",
   "dependencies": {
-    "com.legi.unique_game_objects": "1.1.0"
+    "com.legi.unique_game_objects": "1.2.0"
   },
   "author": {
     "name": "Legi",
