@@ -1,8 +1,14 @@
-﻿## [1.5.0] - 2024-08-06
+﻿## [1.5.1] - 2024-08-06
+
+## Fixed
+
+- Fix error caused my referencing a private field.
+
+## [1.5.0] - 2024-08-06
 
 ## Changed
 
-- Update Unique Game Objects package to 1.2.0
+- Update Unique Game Objects package to 1.2.0.
 
 ## Fixed
 

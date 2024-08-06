@@ -145,7 +145,7 @@ namespace GameCreator.Runtime.SaveablePrefabs
                 case ItemPrefabInstanceMetadata:
                 {
                     var item = InventoryRepository.Get.Items.Get(metadata.Guid.Get);
-                    return item?.m_Prefab;
+                    return item?.HasPrefab == false ? null : item.GetPrefab();
                 }
                 case not null when SaveablePrefabsRepository.Get.Prefabs.TryGet(metadata.Guid, out var prefab):
                     return prefab;
