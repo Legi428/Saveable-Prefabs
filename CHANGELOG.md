@@ -1,4 +1,14 @@
-﻿## [1.4.0] - 2024-06-28
+﻿## [1.5.0] - 2024-08-06
+
+## Changed
+
+- Update Unique Game Objects package to 1.2.0
+
+## Fixed
+
+- [**Breaking**] Add proper support for respawning saved item prefabs.
+
+## [1.4.0] - 2024-06-28
 
 ### Changed
 

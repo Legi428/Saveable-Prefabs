@@ -1,13 +1,13 @@
 {
   "name": "com.legi.saveable_prefabs",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "displayName": "Saveable Prefabs",
   "description": "Saveable Prefabs adds save support to instantiated prefabs.",
   "changelogUrl": "https://github.com/Legi428/Saveable-Prefabs/blob/master/CHANGELOG.md",
   "unity": "2022.3",
   "unityRelease": "35f1",
   "dependencies": {
-    "com.legi.unique_game_objects": "1.1.0"
+    "com.legi.unique_game_objects": "1.2.0"
   },
   "author": {
     "name": "Legi",

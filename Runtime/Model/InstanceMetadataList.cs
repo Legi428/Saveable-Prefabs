@@ -13,6 +13,15 @@ namespace GameCreator.Runtime.SaveablePrefabs
 
         public List<PrefabInstanceMetadata> List => _list;
 
+        public InstanceMetadataList()
+        {
+        }
+
+        public InstanceMetadataList(List<PrefabInstanceMetadata> list)
+        {
+            _list = list;
+        }
+
         public void Add(PrefabInstanceMetadata metadata)
         {
             _list.Add(metadata);
