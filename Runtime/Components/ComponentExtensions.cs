@@ -44,37 +44,6 @@ namespace GameCreator.Runtime.SaveablePrefabs
         }
     }
 
-    internal static class ItemExtensions
-    {
-        static Func<Item, GameObject> _prefabGetterMethod;
-
-        public static GameObject GetPrefab(this Item item)
-        {
-            _prefabGetterMethod ??= CreateItemPrefabGetter();
-            return _prefabGetterMethod(item);
-        }
-
-        static Func<Item, GameObject> CreateItemPrefabGetter()
-        {
-            var method = new DynamicMethod("GetItemPrefab",
-                                           typeof(GameObject),
-                                           new[] { typeof(Item) },
-                                           typeof(SaveablePrefabInstanceManager),
-                                           true);
-
-            var prefabField = typeof(Item).GetField("m_Prefab", BindingFlags.NonPublic | BindingFlags.Instance);
-            if (prefabField == null)
-                throw new InvalidOperationException("m_Prefab not found in Item.");
-
-            var il = method.GetILGenerator();
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(OpCodes.Ldfld, prefabField);
-            il.Emit(OpCodes.Ret);
-
-            return (Func<Item, GameObject>)method.CreateDelegate(typeof(Func<Item, GameObject>));
-        }
-    }
-
     internal static class MarkerExtensions
     {
         static Func<Marker, UniqueID> _markerUniqueIdGetterMethod;

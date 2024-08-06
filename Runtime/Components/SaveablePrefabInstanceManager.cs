@@ -145,7 +145,7 @@ namespace GameCreator.Runtime.SaveablePrefabs
                 case ItemPrefabInstanceMetadata:
                 {
                     var item = InventoryRepository.Get.Items.Get(metadata.Guid.Get);
-                    return item?.HasPrefab == false ? null : item.GetPrefab();
+                    return item?.m_Prefab;
                 }
                 case not null when SaveablePrefabsRepository.Get.Prefabs.TryGet(metadata.Guid, out var prefab):
                     return prefab;
@@ -190,23 +190,21 @@ namespace GameCreator.Runtime.SaveablePrefabs
 
         public string SaveID => "saveable-prefab-system";
         public bool IsShared => false;
-        public Type SaveType => typeof(InstanceMetadataList);
+        public Type SaveType => typeof(SerializableMetadataList);
 
         public object GetSaveData(bool includeNonSavable)
         {
             _instances.PrepareInstances();
-            return _instances;
+            return new SerializableMetadataList(_instances);
         }
 
         public LoadMode LoadMode => LoadMode.Greedy;
 
         public async Task OnLoad(object value)
         {
-            if (value is InstanceMetadataList list && _instances != list)
-            {
-                _instances = list;
-                await RespawnSavedPrefabInstances(_instances.List);
-            }
+            var deserialized = SerializableMetadataList.Deserialize(value);
+            _instances = new InstanceMetadataList(deserialized);
+            await RespawnSavedPrefabInstances(_instances.List);
         }
 
         #endregion
