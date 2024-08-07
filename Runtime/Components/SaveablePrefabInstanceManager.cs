@@ -126,7 +126,7 @@ namespace GameCreator.Runtime.SaveablePrefabs
         static void ReparentNewInstance(PrefabInstanceMetadata instanceMetadata, GameObject instance)
         {
             var parentStructure = instanceMetadata.ParentStructure;
-            if (UniqueGameObjectsManager.Instance.GetByID(parentStructure.InstanceGuidHash) is { } foundUniqueGameObject)
+            if (UniqueGameObjectsManager.GetByID(parentStructure.InstanceGuidHash) is { } foundUniqueGameObject)
             {
                 var foundTransform = foundUniqueGameObject.transform;
                 var newParent = foundTransform.Find(parentStructure.Path) ?? foundTransform;

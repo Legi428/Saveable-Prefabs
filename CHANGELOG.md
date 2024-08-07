@@ -1,16 +1,22 @@
-﻿## [1.5.1] - 2024-08-06
+﻿## [1.5.2] - 2024-08-08
 
-## Fixed
+### Changed
+
+- Update to UniqueGameObjects version 1.3.0
+
+## [1.5.1] - 2024-08-06
+
+### Fixed
 
 - Fix error caused my referencing a private field.
 
 ## [1.5.0] - 2024-08-06
 
-## Changed
+### Changed
 
 - Update Unique Game Objects package to 1.2.0.
 
-## Fixed
+### Fixed
 
 - [**Breaking**] Add proper support for respawning saved item prefabs.
 
