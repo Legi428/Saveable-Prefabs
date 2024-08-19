@@ -266,6 +266,10 @@ namespace GameCreator.Runtime.SaveablePrefabs
             {
                 ProcessComponent(component, saveIds);
             }
+            foreach (var component in gameObject.GetComponentsInChildren<InstanceGuid>(true))
+            {
+                ProcessComponent(component, saveIds);
+            }
             return saveIds;
 
             void ProcessComponent(Component component, ICollection<SaveIdMap> saveIdMaps)

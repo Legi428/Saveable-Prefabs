@@ -1,4 +1,10 @@
-﻿## [1.5.2] - 2024-08-08
+﻿## [1.5.3] - 2024-08-20
+
+### Fixed
+
+- Add proper support for InstanceGuid components.
+
+## [1.5.2] - 2024-08-08
 
 ### Changed
 
