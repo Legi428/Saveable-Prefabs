@@ -1,4 +1,11 @@
-﻿## [1.5.3] - 2024-08-20
+﻿## [1.6.0] - 2024-11-23
+
+### Changed
+
+- Support latest version of GameCreator 2 v2.17.51
+- Remove support for Character component as its unique Id was removed in GC2.
+
+## [1.5.3] - 2024-08-20
 
 ### Fixed
 

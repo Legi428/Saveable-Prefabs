@@ -221,10 +221,6 @@ namespace GameCreator.Runtime.SaveablePrefabs
             {
                 ProcessComponent(component);
             }
-            foreach (var component in gameObject.GetComponentsInChildren<Character>(true))
-            {
-                ProcessComponent(component);
-            }
             foreach (var component in gameObject.GetComponentsInChildren<Marker>(true))
             {
                 ProcessComponent(component);
@@ -255,10 +251,6 @@ namespace GameCreator.Runtime.SaveablePrefabs
                 ProcessComponent(component, saveIds);
             }
             foreach (var component in gameObject.GetComponentsInChildren<TLocalVariables>(true))
-            {
-                ProcessComponent(component, saveIds);
-            }
-            foreach (var component in gameObject.GetComponentsInChildren<Character>(true))
             {
                 ProcessComponent(component, saveIds);
             }
@@ -293,9 +285,6 @@ namespace GameCreator.Runtime.SaveablePrefabs
                     case TLocalVariables localVariables:
                         localVariables.SetIdString(newIdString);
                         break;
-                    case Character character:
-                        character.ChangeId(newIdString);
-                        break;
                     case Marker marker:
                         var currentIdString = marker.GetIdString();
                         marker.SetIdString(newIdString);
@@ -329,8 +318,6 @@ namespace GameCreator.Runtime.SaveablePrefabs
                         return remember.GetIdString();
                     case TLocalVariables localVariables:
                         return localVariables.GetIdString();
-                    case Character character:
-                        return character.ID;
                     case Marker marker:
                         return marker.GetIdString();
                     case InstanceGuid instanceGuid:
