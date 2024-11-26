@@ -22,7 +22,6 @@ Based on the fantastic Reminstance package. https://github.com/neoneper/Reminsta
     - Remember
     - Local List Variables
     - Local Name Variables
-    - Character
     - Marker
 
 ### Dependencies
@@ -40,12 +39,6 @@ Supported Unity versions (see next section for more information):
 ### Constraints/Known Issues
 
 - While the package has been optimized in many areas, there may still be delays when loading numerous saved prefabs.
-
-- Due to a Unity
-  bug ([UUM-67809](https://issuetracker.unity3d.com/issues/instantiated-prefabs-recttransform-values-are-incorrect-when-object-dot-instantiateasync-is-used)),
-  SkinnedMeshRenderer components are not created correctly. This issue affects characters
-  that fail to animate properly upon respawn. The bug has been addressed in Unity 6000.0.7f1 and is scheduled for
-  resolution in version 2022.3.35f1.
 
 - Reparenting is achieved by locating the parent using its name and position in the hierarchy. If GameObject names
   change
