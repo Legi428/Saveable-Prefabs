@@ -3,8 +3,6 @@ using GameCreator.Runtime.Inventory;
 using GameCreator.Runtime.Variables;
 using System;
 using System.Collections.Generic;
-using System.Reflection;
-using System.Reflection.Emit;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -12,287 +10,123 @@ namespace GameCreator.Runtime.SaveablePrefabs
 {
     internal static class SceneExtensions
     {
-        static Func<int, string> _sceneGuidGetterMethod;
-
+        // Replace dynamic method with direct reflection call
         public static string GetGuid(this Scene scene)
         {
-            _sceneGuidGetterMethod ??= CreateSceneGuidGetter();
-            return _sceneGuidGetterMethod(scene.GetHashCode());
-        }
-
-        static Func<int, string> CreateSceneGuidGetter()
-        {
-            // Define the dynamic method
-            var method = new DynamicMethod("GetSceneGuid",
-                                           typeof(string),
-                                           new[] { typeof(int) },
-                                           typeof(SaveablePrefabInstanceManager),
-                                           true);
-
             var sceneType = typeof(Scene);
-
-            var getGUIDInternalMethod = sceneType.GetMethod("GetGUIDInternal", BindingFlags.NonPublic | BindingFlags.Static);
-            if (getGUIDInternalMethod == null)
+            var methodInfo = sceneType.GetMethod("GetGUIDInternal", 
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+            
+            if (methodInfo == null)
                 throw new InvalidOperationException("GetGUIDInternal method not found in Scene.");
-
-            var il = method.GetILGenerator();
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(OpCodes.Call, getGUIDInternalMethod);
-            il.Emit(OpCodes.Ret);
-
-            return (Func<int, string>)method.CreateDelegate(typeof(Func<int, string>));
+                
+            return (string)methodInfo.Invoke(null, new object[] { scene.GetHashCode() });
         }
     }
 
     internal static class ItemExtensions
     {
-        static Func<Item, GameObject> _prefabGetterMethod;
+        // Replace dynamic access with cached field info
+        readonly static System.Reflection.FieldInfo PrefabField = typeof(Item)
+            .GetField("m_Prefab", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
         public static GameObject GetPrefab(this Item item)
         {
-            _prefabGetterMethod ??= CreateItemPrefabGetter();
-            return _prefabGetterMethod(item);
-        }
-
-        static Func<Item, GameObject> CreateItemPrefabGetter()
-        {
-            var method = new DynamicMethod("GetItemPrefab",
-                                           typeof(GameObject),
-                                           new[] { typeof(Item) },
-                                           typeof(SaveablePrefabInstanceManager),
-                                           true);
-
-            var prefabField = typeof(Item).GetField("m_Prefab", BindingFlags.NonPublic | BindingFlags.Instance);
-            if (prefabField == null)
-                throw new InvalidOperationException("m_Prefab not found in Item.");
-
-            var il = method.GetILGenerator();
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(OpCodes.Ldfld, prefabField);
-            il.Emit(OpCodes.Ret);
-
-            return (Func<Item, GameObject>)method.CreateDelegate(typeof(Func<Item, GameObject>));
+            if (PrefabField == null)
+                throw new InvalidOperationException("m_Prefab field not found in Item.");
+                
+            return (GameObject)PrefabField.GetValue(item);
         }
     }
 
     internal static class MarkerExtensions
     {
-        static Func<Marker, UniqueID> _markerUniqueIdGetterMethod;
-        static Action<Marker, UniqueID> _markerUniqueIdSetterMethod;
-        static Func<Dictionary<IdString, Marker>> _markerDictionaryGetterMethod;
+        // Cache reflection info
+        readonly static System.Reflection.FieldInfo UniqueIdField = typeof(Marker)
+            .GetField("m_UniqueID", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        readonly static System.Reflection.PropertyInfo MarkersProperty = typeof(Marker)
+            .GetProperty("Markers", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
 
         public static IdString GetIdString(this Marker marker)
         {
-            _markerUniqueIdGetterMethod ??= CreateMarkerUniqueIdGetter();
-            return _markerUniqueIdGetterMethod(marker).Get;
+            if (UniqueIdField == null)
+                throw new InvalidOperationException("m_UniqueID not found in Marker.");
+                
+            var uniqueId = (UniqueID)UniqueIdField.GetValue(marker);
+            return uniqueId.Get;
         }
 
-        public static Dictionary<IdString, Marker> GetMarkersDictionary(this Marker marker)
+        public static Dictionary<IdString, Marker> GetMarkersDictionary(this Marker _)
         {
-            _markerDictionaryGetterMethod ??= CreateMarkerDictionaryGetter();
-            return _markerDictionaryGetterMethod();
+            if (MarkersProperty == null)
+                throw new InvalidOperationException("Markers property not found in Marker.");
+                
+            return (Dictionary<IdString, Marker>)MarkersProperty.GetValue(null);
         }
 
         public static void SetIdString(this Marker marker, IdString newIdString)
         {
-            _markerUniqueIdSetterMethod ??= CreateMarkerUniqueIdSetter();
-            _markerUniqueIdSetterMethod(marker, new UniqueID(newIdString.String));
-        }
-
-        static Func<Marker, UniqueID> CreateMarkerUniqueIdGetter()
-        {
-            var method = new DynamicMethod("GetMarkerUniqueId",
-                                           typeof(UniqueID),
-                                           new[] { typeof(Marker) },
-                                           typeof(SaveablePrefabInstanceManager),
-                                           true);
-
-            var uniqueIdField = typeof(Marker).GetField("m_UniqueID", BindingFlags.Instance | BindingFlags.NonPublic);
-            if (uniqueIdField == null)
-                throw new InvalidOperationException("m_UniqueID not found in Marker or its base classes.");
-
-            var il = method.GetILGenerator();
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(OpCodes.Ldfld, uniqueIdField);
-            il.Emit(OpCodes.Ret);
-
-            return (Func<Marker, UniqueID>)method.CreateDelegate(typeof(Func<Marker, UniqueID>));
-        }
-
-        static Func<Dictionary<IdString, Marker>> CreateMarkerDictionaryGetter()
-        {
-            var method = new DynamicMethod("GetMarkerDictionary",
-                                           typeof(Dictionary<IdString, Marker>),
-                                           new[] { typeof(Marker) },
-                                           typeof(SaveablePrefabInstanceManager),
-                                           true);
-
-            var markerDictionaryProperty = typeof(Marker).GetProperty("Markers", BindingFlags.NonPublic | BindingFlags.Static);
-            if (markerDictionaryProperty == null)
-                throw new InvalidOperationException("Markers property not found in Marker or its base classes.");
-
-            var getMarkerDictionaryMethod = markerDictionaryProperty.GetGetMethod(true);
-            if (getMarkerDictionaryMethod == null)
-                throw new InvalidOperationException("GetMethod for Markers property not found.");
-
-            var il = method.GetILGenerator();
-            il.Emit(OpCodes.Call, getMarkerDictionaryMethod);
-            il.Emit(OpCodes.Ret);
-
-            return (Func<Dictionary<IdString, Marker>>)method.CreateDelegate(typeof(Func<Dictionary<IdString, Marker>>));
-        }
-
-        static Action<Marker, UniqueID> CreateMarkerUniqueIdSetter()
-        {
-            var method = new DynamicMethod("SetMarkerUniqueId",
-                                           typeof(void),
-                                           new[] { typeof(Marker), typeof(UniqueID) },
-                                           typeof(SaveablePrefabInstanceManager),
-                                           true);
-
-            var uniqueIdField = typeof(Marker).GetField("m_UniqueID", BindingFlags.Instance | BindingFlags.NonPublic);
-            if (uniqueIdField == null)
-                throw new InvalidOperationException("m_UniqueID not found in Marker or its base classes.");
-
-            var il = method.GetILGenerator();
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(OpCodes.Ldarg_1);
-            il.Emit(OpCodes.Stfld, uniqueIdField);
-            il.Emit(OpCodes.Ret);
-
-            return (Action<Marker, UniqueID>)method.CreateDelegate(typeof(Action<Marker, UniqueID>));
+            if (UniqueIdField == null)
+                throw new InvalidOperationException("m_UniqueID not found in Marker.");
+                
+            UniqueIdField.SetValue(marker, new UniqueID(newIdString.String));
         }
     }
 
     internal static class RememberExtensions
     {
-        static Func<Remember, SaveUniqueID> _rememberSaveUniqueIdGetterCache;
-        static Action<Remember, UniqueID> _rememberUniqueIdSetterMethod;
+        // Cache reflection fields
+        readonly static System.Reflection.FieldInfo SaveUniqueIdField = typeof(Remember)
+            .GetField("m_SaveUniqueID", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        readonly static System.Reflection.FieldInfo UniqueIdField = SaveUniqueIdField?.FieldType
+            .GetField("m_UniqueID", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
         public static IdString GetIdString(this Remember remember)
         {
-            _rememberSaveUniqueIdGetterCache ??= CreateSaveUniqueIdGetter();
-            return _rememberSaveUniqueIdGetterCache(remember).Get;
+            if (SaveUniqueIdField == null)
+                throw new InvalidOperationException("m_SaveUniqueID not found in Remember.");
+                
+            var saveUniqueId = (SaveUniqueID)SaveUniqueIdField.GetValue(remember);
+            return saveUniqueId.Get;
         }
 
         public static void SetIdString(this Remember remember, IdString newIdString)
         {
-            _rememberUniqueIdSetterMethod ??= CreateSaveUniqueIdUniqueIdSetter();
-            _rememberUniqueIdSetterMethod(remember, new UniqueID(newIdString.String));
-        }
-
-        static Func<Remember, SaveUniqueID> CreateSaveUniqueIdGetter()
-        {
-            var method = new DynamicMethod("GetRememberSaveUniqueId",
-                                           typeof(SaveUniqueID),
-                                           new[] { typeof(Remember) },
-                                           typeof(SaveablePrefabInstanceManager),
-                                           true);
-
-            var saveUniqueIdField = typeof(Remember).GetField("m_SaveUniqueID", BindingFlags.Instance | BindingFlags.NonPublic);
-            if (saveUniqueIdField == null)
-                throw new InvalidOperationException("m_SaveUniqueID not found in Remember or its base classes.");
-
-            var il = method.GetILGenerator();
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(OpCodes.Ldfld, saveUniqueIdField);
-            il.Emit(OpCodes.Ret);
-
-            return (Func<Remember, SaveUniqueID>)method.CreateDelegate(typeof(Func<Remember, SaveUniqueID>));
-        }
-
-        static Action<Remember, UniqueID> CreateSaveUniqueIdUniqueIdSetter()
-        {
-            var method = new DynamicMethod("SetRememberSaveUniqueIdUniqueId",
-                                           typeof(void),
-                                           new[] { typeof(Remember), typeof(UniqueID) },
-                                           typeof(SaveablePrefabInstanceManager),
-                                           true);
-
-            var saveUniqueIdField = typeof(Remember).GetField("m_SaveUniqueID", BindingFlags.Instance | BindingFlags.NonPublic);
-            if (saveUniqueIdField == null)
-                throw new InvalidOperationException("m_SaveUniqueID not found in Remember or its base classes.");
-
-            var uniqueIdField =
-                saveUniqueIdField.FieldType.GetField("m_UniqueID", BindingFlags.Instance | BindingFlags.NonPublic);
-            if (uniqueIdField == null)
-                throw new InvalidOperationException("m_UniqueID not found in SaveUniqueID or its base classes.");
-
-            var il = method.GetILGenerator();
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(OpCodes.Ldfld, saveUniqueIdField);
-            il.Emit(OpCodes.Ldarg_1);
-            il.Emit(OpCodes.Stfld, uniqueIdField);
-            il.Emit(OpCodes.Ret);
-
-            return (Action<Remember, UniqueID>)method.CreateDelegate(typeof(Action<Remember, UniqueID>));
+            if (SaveUniqueIdField == null || UniqueIdField == null)
+                throw new InvalidOperationException("Required fields not found in Remember.");
+                
+            var saveUniqueId = SaveUniqueIdField.GetValue(remember);
+            UniqueIdField.SetValue(saveUniqueId, new UniqueID(newIdString.String));
         }
     }
 
     internal static class LocalVariablesExtensions
     {
-        static Func<TLocalVariables, SaveUniqueID> _localVariablesSaveUniqueIdGetterCache;
-        static Action<TLocalVariables, UniqueID> _rememberUniqueIdSetterMethod;
+        // Cache reflection fields
+        readonly static System.Reflection.FieldInfo SaveUniqueIdField = typeof(TLocalVariables)
+            .GetField("m_SaveUniqueID", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        readonly static System.Reflection.FieldInfo UniqueIdField = SaveUniqueIdField?.FieldType
+            .GetField("m_UniqueID", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
         public static IdString GetIdString(this TLocalVariables localVariables)
         {
-            _localVariablesSaveUniqueIdGetterCache ??= CreateSaveUniqueIdGetter();
-            return _localVariablesSaveUniqueIdGetterCache(localVariables).Get;
+            if (SaveUniqueIdField == null)
+                throw new InvalidOperationException("m_SaveUniqueID not found in TLocalVariables.");
+                
+            var saveUniqueId = (SaveUniqueID)SaveUniqueIdField.GetValue(localVariables);
+            return saveUniqueId.Get;
         }
 
         public static void SetIdString(this TLocalVariables localVariables, IdString newIdString)
         {
-            _rememberUniqueIdSetterMethod ??= CreateSaveUniqueIdUniqueIdSetter();
-            _rememberUniqueIdSetterMethod(localVariables, new UniqueID(newIdString.String));
-        }
-
-        static Func<TLocalVariables, SaveUniqueID> CreateSaveUniqueIdGetter()
-        {
-            var method = new DynamicMethod("GetTLocalVariablesSaveUniqueId",
-                                           typeof(SaveUniqueID),
-                                           new[] { typeof(TLocalVariables) },
-                                           typeof(SaveablePrefabInstanceManager),
-                                           true);
-
-            var saveUniqueIdField =
-                typeof(TLocalVariables).GetField("m_SaveUniqueID", BindingFlags.Instance | BindingFlags.NonPublic);
-            if (saveUniqueIdField == null)
-                throw new InvalidOperationException("m_SaveUniqueID not found in Remember or its base classes.");
-
-            var il = method.GetILGenerator();
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(OpCodes.Ldfld, saveUniqueIdField);
-            il.Emit(OpCodes.Ret);
-
-            return (Func<TLocalVariables, SaveUniqueID>)method.CreateDelegate(typeof(Func<TLocalVariables, SaveUniqueID>));
-        }
-
-        static Action<TLocalVariables, UniqueID> CreateSaveUniqueIdUniqueIdSetter()
-        {
-            var method = new DynamicMethod("SetTLocalVariablesSaveUniqueIdUniqueId",
-                                           typeof(void),
-                                           new[] { typeof(TLocalVariables), typeof(UniqueID) },
-                                           typeof(SaveablePrefabInstanceManager),
-                                           true);
-
-            var saveUniqueIdField =
-                typeof(TLocalVariables).GetField("m_SaveUniqueID", BindingFlags.Instance | BindingFlags.NonPublic);
-            if (saveUniqueIdField == null)
-                throw new InvalidOperationException("m_SaveUniqueID not found in Remember or its base classes.");
-
-            var uniqueIdField =
-                saveUniqueIdField.FieldType.GetField("m_UniqueID", BindingFlags.Instance | BindingFlags.NonPublic);
-            if (uniqueIdField == null)
-                throw new InvalidOperationException("m_UniqueID not found in SaveUniqueID or its base classes.");
-
-            var il = method.GetILGenerator();
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(OpCodes.Ldfld, saveUniqueIdField);
-            il.Emit(OpCodes.Ldarg_1);
-            il.Emit(OpCodes.Stfld, uniqueIdField);
-            il.Emit(OpCodes.Ret);
-
-            return (Action<TLocalVariables, UniqueID>)method.CreateDelegate(typeof(Action<TLocalVariables, UniqueID>));
+            if (SaveUniqueIdField == null || UniqueIdField == null)
+                throw new InvalidOperationException("Required fields not found in TLocalVariables.");
+                
+            var saveUniqueId = SaveUniqueIdField.GetValue(localVariables);
+            UniqueIdField.SetValue(saveUniqueId, new UniqueID(newIdString.String));
         }
     }
 }
