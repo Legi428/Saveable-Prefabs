@@ -1,4 +1,10 @@
-﻿## [1.7.0] - 2024-11-26
+﻿## [1.8.0] - 2024-12-23
+
+### Fixed
+
+- Add support for "no domain reload" in the editor and fix issues.
+
+## [1.7.0] - 2024-11-26
 
 ### Changed
 
